@@ -67,7 +67,7 @@ class HistoryStorageTests(unittest.TestCase):
         protected.write_text("keep", encoding="utf-8")
         self.settings.write_text('{"provider":"bailian"}', encoding="utf-8")
         config.clear_history()
-        self.assertEqual(protected.read_text(), "keep")
+        self.assertEqual(protected.read_text(encoding="utf-8"), "keep")
         self.assertTrue(self.settings.exists())
 
     def test_clear_is_repeatable_with_missing_directories(self):
@@ -108,7 +108,7 @@ class HistoryStorageTests(unittest.TestCase):
                 cfg = config.load_config()
                 self.assertNotIn("keep_training_audio", cfg)
                 config.save_config(cfg)
-                self.assertNotIn("keep_training_audio", json.loads(self.settings.read_text()))
+                self.assertNotIn("keep_training_audio", json.loads(self.settings.read_text(encoding="utf-8")))
                 self.assertTrue((training / "old.flac").exists())
         self.settings.unlink()
         self.assertNotIn("keep_training_audio", config.load_config())
