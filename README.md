@@ -1,3 +1,11 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme-brand-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/assets/readme-brand-light.png">
+    <img src="docs/assets/readme-brand-light.png" alt="OneMore · 又一个语音输入法" width="600" height="150">
+  </picture>
+</p>
+
 # OneMore
 
 又一个语音输入法。按住快捷键说话，或按一下开始、再按一下结束，把整理后的文字输入到当前输入框。
