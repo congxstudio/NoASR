@@ -1,0 +1,3 @@
+*.pdf binary
+# Preserve the upstream license text verbatim.
+macos/ThirdParty/LAME-COPYING.txt -whitespace

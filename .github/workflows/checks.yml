@@ -1,0 +1,23 @@
+name: Source and storage checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python-checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Parse Windows source
+        run: python -c "import ast,pathlib; [ast.parse(p.read_text(encoding='utf-8'), filename=str(p)) for p in pathlib.Path('windows').rglob('*') if p.suffix in ('.py','.pyw')]"
+      - name: Test storage and protected input logic without devices
+        run: python -m unittest discover -s windows/tests -v

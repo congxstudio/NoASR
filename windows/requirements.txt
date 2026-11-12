@@ -1,0 +1,7 @@
+PySide6
+sounddevice
+numpy
+keyboard
+soundfile
+comtypes
+httpx2
