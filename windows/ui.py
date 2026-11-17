@@ -1,7 +1,7 @@
 """界面:设置窗口(通用 / 模型配置 / 麦克风与提示音 / 历史记录)、首次引导、录音胶囊。
 
 布局与功能对齐 macos/Sources/UI.swift;材质参考 Mac 的轻薄玻璃,保留 Windows 上的清晰对比度:
-浅色淡彩底光、珍珠白渐变卡片与柔和高光,交互状态使用 Windows 默认蓝色;
+浅色淡彩底光、珍珠白渐变卡片与柔和高光,交互状态使用 NoASR 品牌绿色;
 另有深色外观(跟随系统或手动选择),颜色都在 PALETTES 两套配色表里,切换时 set_theme() 后重新套样式表即可。
 文字和编辑区域保持稳定对比度,不通过降低整体透明度实现玻璃感。
 设置改动立即保存,没有"保存"按钮。
@@ -15,7 +15,7 @@ from collections import deque
 from ctypes import wintypes
 
 from PySide6.QtCore import QAbstractAnimation, QByteArray, QEasingCurve, QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal
-from PySide6.QtGui import (QColor, QFont, QFontMetrics, QGuiApplication, QIcon, QLinearGradient, QRadialGradient,
+from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QGuiApplication, QIcon, QLinearGradient, QRadialGradient,
                            QPainter, QPainterPath, QPen, QPixmap)
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
@@ -35,13 +35,13 @@ FONT = "Microsoft YaHei UI"
 PALETTES = {
     "light": {
         "text": "#404b57", "secondary": "#616f7e", "title": "#4c5766", "section": "#515d6a",
-        "accent": "#0078d4", "accent_hover": "#0067c0", "accent_text": "#ffffff", "accent_border": "#0067c0",
-        "link_hover": "#0067c0", "selection": "#0078d4", "blue": "#0078d4", "error": "#b35f50",
+        "accent": "#008a6f", "accent_hover": "#007c64", "accent_text": "#073c32", "accent_border": "#00866c",
+        "link_hover": "#007c64", "selection": "#00836a", "blue": "#00a884", "error": "#b35f50",
         "window": "#f1f4f7", "win_border": "#f2ffffff", "card": "#efffffff", "card_border": "#f0ffffff",
         "field": "#f4ffffff", "border": "#dbe4e9", "field_line": "#b9c9cf",
         "button": "#f5ffffff", "button_edge": "#cdd9df", "button_hover": "#ffffff", "button_pressed": "#e6edf0",
-        "button_pressed_text": "#0067c0", "disabled_text": "#98a3ae", "disabled_bg": "#eef2f5",
-        "list_sel": "#dceeff", "menu_sel": "#e5f1fb", "menu_border": "#d8e1e6", "separator": "#e0e7ec",
+        "button_pressed_text": "#007c64", "disabled_text": "#98a3ae", "disabled_bg": "#eef2f5",
+        "list_sel": "#d8f4eb", "menu_sel": "#e2f7ef", "menu_border": "#d8e1e6", "separator": "#e0e7ec",
         "groove": "#dce5e8", "slider_knob": "#ffffff", "scrollbar": "rgba(79,99,116,0.24)",
         "keycap": "#f5ffffff", "keycap_border": "#ffffff", "keycap_edge": "#cdd9df",
         "seg_bg": "#a0e6ecf0", "seg_border": "#b8d9e2e8", "seg_sel": "#f0ffffff", "seg_sel_border": "#ffffff",
@@ -56,25 +56,25 @@ PALETTES = {
         "brand_text": "#58616e",
         "card_top": "#f8ffffff", "card_bottom": "#dcf7f9fb", "surface_highlight": "#c8ffffff",
         "button_top": "#fcffffff", "button_bottom": "#e7edf2f5",
-        "primary_top": "#0078d4", "primary_bottom": "#0078d4", "primary_hover": "#0067c0",
-        "toggle_on_top": "#0078d4", "toggle_on_bottom": "#0078d4", "toggle_on_border": "#0067c0",
+        "primary_top": "#00bf98", "primary_bottom": "#00bf98", "primary_hover": "#00aa87",
+        "toggle_on_top": "#00bf98", "toggle_on_bottom": "#00bf98", "toggle_on_border": "#008a6f",
         "knob_bottom": "#f2f6fc", "knob_border": "#b4ffffff",
         "nav_sel": "#b8ffffff", "nav_border": "#f0ffffff",
-        "step_active": "#dceeff", "step_active_border": "#80bbee",
+        "step_active": "#d8f4eb", "step_active_border": "#89d7bf",
         "shadow": "#71859a", "ambient_lilac": "#18bdb2e5", "ambient_mint": "#16b1e0d6", "ambient_peach": "#12f2d2c1",
     },
     "dark": {
         "text": "#e3e8ef", "secondary": "#afbac7", "title": "#eef1f6", "section": "#d2dce7",
-        "accent": "#60cdff", "accent_hover": "#8bd9ff", "accent_text": "#ffffff", "accent_border": "#60aee8",
-        "link_hover": "#8bd9ff", "selection": "#0078d4", "blue": "#60cdff", "error": "#e7a495",
+        "accent": "#25ddb5", "accent_hover": "#55e7c6", "accent_text": "#073c32", "accent_border": "#00866c",
+        "link_hover": "#55e7c6", "selection": "#00836a", "blue": "#25ddb5", "error": "#e7a495",
         "window": "#232730", "win_border": "#52636f80", "card": "#ed303741", "card_border": "#424d5a",
         "field": "#303741", "border": "#4b5664", "field_line": "#677687",
         "button": "#343c48", "button_edge": "#222a33", "button_hover": "#414b58", "button_pressed": "#2b323e",
         "button_pressed_text": "#c8d8dc", "disabled_text": "#758190", "disabled_bg": "#292f39",
-        "list_sel": "#254c70", "menu_sel": "#293f56", "menu_border": "#4b5664", "separator": "#424c58",
+        "list_sel": "#254f43", "menu_sel": "#293f37", "menu_border": "#4b5664", "separator": "#424c58",
         "groove": "#46525f", "slider_knob": "#e8eef6", "scrollbar": "rgba(200,217,228,0.25)",
         "keycap": "#353f4b", "keycap_border": "#536171", "keycap_edge": "#242c36",
-        "seg_bg": "#29303a", "seg_border": "#46515f", "seg_sel": "#465463", "seg_sel_border": "#657485",
+        "seg_bg": "#29303a", "seg_border": "#46515f", "seg_sel": "#36564c", "seg_sel_border": "#5c8275",
         "seg_text": "#bdc9d5", "knob_on": "#ffffff", "toggle_off": "#8c9aa8", "toggle_off_bg": "#2d3540",
         "toggle_off_hover": "#38434f", "glyph_disabled": "#5d6977", "glyph_inactive": "#8898a8",
         "tint": "#ffffff",
@@ -86,11 +86,11 @@ PALETTES = {
         "brand_text": "#d8e0ec",
         "card_top": "#ee343b46", "card_bottom": "#ed2d333d", "surface_highlight": "#226d8094",
         "button_top": "#3a424e", "button_bottom": "#303744",
-        "primary_top": "#0078d4", "primary_bottom": "#0078d4", "primary_hover": "#1687e0",
-        "toggle_on_top": "#0078d4", "toggle_on_bottom": "#0078d4", "toggle_on_border": "#60aee8",
+        "primary_top": "#00bf98", "primary_bottom": "#00bf98", "primary_hover": "#25d3ac",
+        "toggle_on_top": "#00bf98", "toggle_on_bottom": "#00bf98", "toggle_on_border": "#25ddb5",
         "knob_bottom": "#eaf2fc", "knob_border": "#d0ffffff",
         "nav_sel": "#b33d4c5b", "nav_border": "#667c8b9c",
-        "step_active": "#254c70", "step_active_border": "#60aee8",
+        "step_active": "#254f43", "step_active_border": "#25ddb5",
         "shadow": "#000000", "ambient_lilac": "#125b4d77", "ambient_mint": "#12365d59", "ambient_peach": "#0a705247",
     },
 }
@@ -292,7 +292,7 @@ set_theme(False)
 
 
 def make_icon_pixmap(size=64):
-    """OneMore 淡彩玻璃图标;按实际显示尺寸平滑缩放。"""
+    """NoASR 应用图标;按实际显示尺寸平滑缩放。"""
     return QIcon(config.ICON_PATH).pixmap(size, size)
 
 
@@ -1243,11 +1243,11 @@ class BrandWordmark(QWidget):
     """直接绘制确认稿的 SVG 字形轮廓;不经过字体匹配或文字排版。"""
     def __init__(self):
         super().__init__()
-        with open(os.path.join(ASSETS, "onemore-wordmark.svg"), "rb") as source:
+        with open(os.path.join(ASSETS, "noasr-wordmark.svg"), "rb") as source:
             self._source = source.read()
         self._renderer = QSvgRenderer(self)
         self._color = None
-        self.setFixedSize(112, 21)
+        self.setFixedSize(124, 29)
         self.setAccessibleName(config.APP_NAME)
         self.setAccessibleDescription("品牌字标")
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
@@ -1263,28 +1263,19 @@ class BrandWordmark(QWidget):
 
 
 class BrandHeader(QWidget):
-    """单行 OneMore 字标与用途说明,配色随浅色/深色主题切换。"""
+    """NoASR 字标与用途说明,配色随浅色/深色主题切换。"""
     def __init__(self):
         super().__init__()
         self.setFixedHeight(68)
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 6, 4, 6)
-        layout.setSpacing(6)
-        icon = QLabel()
-        pm = make_icon_pixmap(112)
-        pm.setDevicePixelRatio(2)
-        icon.setPixmap(pm)
-        icon.setFixedSize(56, 56)
-        icon.setAccessibleName(config.APP_NAME + " 图标")
-        layout.addWidget(icon)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 6, 4, 6)
+        layout.setSpacing(4)
+        layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.name = BrandWordmark()
-        words = QVBoxLayout()
-        words.setSpacing(3)
-        words.setAlignment(Qt.AlignVCenter)
-        words.addWidget(self.name)
-        words.addWidget(note("又一个语音输入法", 12))
-        layout.addLayout(words)
-        layout.addStretch()
+        layout.addWidget(self.name)
+        subtitle = note("Omni全模态语音输入法", 11)
+        subtitle.setWordWrap(False)
+        layout.addWidget(subtitle)
 
 
 def _set_note(lab, text):
@@ -1338,8 +1329,14 @@ class SettingsWindow(ImmersiveWindow):
         self.setWindowTitle(f"设置 - {config.APP_NAME}")
         self.setWindowIcon(QIcon(make_icon_pixmap()))
         self.setStyleSheet(STYLE)
-        self.set_content_minimum(820, 560)
-        self.resize_content(860, 600)
+        # Qt 使用逻辑像素；扣除阴影和屏幕边距，小屏/高缩放时允许收缩。
+        screen = QGuiApplication.screenAt(QCursor.pos()) or self.screen()
+        available = screen.availableGeometry()
+        max_width = max(1, available.width() - 2 * self.SHADOW - 32)
+        max_height = max(1, available.height() - 2 * self.SHADOW - 32)
+        self.set_content_minimum(min(820, max_width), min(560, max_height))
+        self.resize_content(min(960, max_width), min(680, max_height))
+        self.move(available.center() - self.rect().center())
         self._loading = False
         self._capturing = False
 
@@ -1365,7 +1362,8 @@ class SettingsWindow(ImmersiveWindow):
             sl.addWidget(b)
             self.tab_buttons[key] = b
         sl.addStretch()
-        version = label(f"v{config.APP_VERSION}", 11, SECONDARY)
+        version = label(f"v{config.APP_VERSION.split('-')[0]} · 预览版", 11, SECONDARY)
+        version.setToolTip(config.APP_VERSION)
         version.setContentsMargins(6, 0, 0, 0)
         sl.addWidget(version)
         outer.addWidget(side)
@@ -1537,7 +1535,7 @@ class SettingsWindow(ImmersiveWindow):
     def _build_service(self):
         w, lay = page("模型配置")
         names = {k: v["name"] for k, v in config.PROVIDERS.items()}
-        self.provider = Segmented(names, "volcano", px=12.5, recommended="volcano")
+        self.provider = Segmented(names, "volcano", px=12.5)
         self.provider.changed.connect(self._provider_changed)
         self.key = QLineEdit()
         self.key.setEchoMode(QLineEdit.Password)
@@ -2551,7 +2549,7 @@ class OnboardingWindow(ImmersiveWindow):
 
         # 第 1 步
         names = {k: v["name"] for k, v in config.PROVIDERS.items()}
-        self.provider = Segmented(names, controller.cfg["provider"], px=12.5, recommended="volcano")
+        self.provider = Segmented(names, controller.cfg["provider"], px=12.5)
         self.provider.changed.connect(self._provider_changed)
         self.key = QLineEdit()
         self.key.setEchoMode(QLineEdit.Password)

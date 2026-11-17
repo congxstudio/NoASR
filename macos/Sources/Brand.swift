@@ -1,49 +1,49 @@
 import AppKit
 
+/// 与 NoASR 字标共用色相；文字使用深浅两档，保持对比度。
+enum BrandPalette {
+    static let green = NSColor(srgbRed: 0, green: 191.0/255, blue: 152.0/255, alpha: 1)
+    static let greenHover = NSColor(srgbRed: 0, green: 170.0/255, blue: 135.0/255, alpha: 1)
+    static let ink = NSColor(srgbRed: 7.0/255, green: 60.0/255, blue: 50.0/255, alpha: 1)
+    static let accent = AppTheme.color(AppTheme.rgb(0, 138.0/255, 111.0/255), AppTheme.rgb(37.0/255, 221.0/255, 181.0/255))
+}
+
 /// 两端共用的定稿图标与字标；PDF 保留 SVG 轮廓，不依赖本机字体。
 final class BrandHeader: NSView {
+    private let wordmark = NSImageView()
     private static func image(_ name: String) -> NSImage? {
         Bundle.main.resourceURL.flatMap { NSImage(contentsOf: $0.appendingPathComponent(name)) }
     }
-    /// ImageGen 生成的单色 OM；按主体范围取样，保留透明边缘抗锯齿。
+    /// 透明单色 N 与声波镂空，作为系统菜单栏模板图像。
     private static let statusIcon: NSImage? = {
-        guard let source = image("MenuBarOM.png") else { return nil }
-        let result = NSImage(size: NSSize(width: 24, height: 18), flipped: false) { _ in
-            // 原图1648×954；主体像素范围 x145…1464、y119…851（从上向下）。
-            let sourceRect = NSRect(x: 145, y: 103, width: 1319, height: 732)
-            let size = NSSize(width: 22, height: 22 * 732 / 1319)
-            source.draw(in: NSRect(x: 1, y: (18 - size.height) / 2, width: size.width, height: size.height),
-                        from: sourceRect, operation: .sourceOver, fraction: 1,
-                        respectFlipped: true, hints: [.interpolation: NSImageInterpolation.high])
-            return true
-        }
+        guard let result = image("MenuBarNoASR.png") else { return nil }
+        result.size = NSSize(width: 16, height: 14.4)
         result.isTemplate = true
-        result.accessibilityDescription = "OneMore · 语音输入"
+        result.accessibilityDescription = "NoASR · 语音输入"
         return result
     }()
     static func menuIcon() -> NSImage? { statusIcon }
     init(compact: Bool = false) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
-        let icon = NSImageView(); icon.image = Self.image("AppIcon.png")
-        icon.imageScaling = .scaleProportionallyUpOrDown
-        icon.setAccessibilityLabel("OneMore 图标")
-        let wordmark = NSImageView(); wordmark.image = Self.image("OneMore-wordmark.pdf")
-        wordmark.image?.isTemplate = true
-        wordmark.contentTintColor = AppTheme.color(NSColor(srgbRed: 0.345, green: 0.38, blue: 0.431, alpha: 1), .init(white: 0.88, alpha: 1))
+        refreshWordmark()
         wordmark.imageScaling = .scaleProportionallyUpOrDown
-        wordmark.setAccessibilityLabel("OneMore")
-        let subtitle = note("又一个语音输入法", size: compact ? 10.5 : 11.5)
-        let words = stack([wordmark, subtitle], spacing: 3)
-        let row = NSStackView(views: [icon, words]); row.spacing = 6; row.alignment = .centerY
+        wordmark.setAccessibilityLabel("NoASR")
+        let subtitle = note("Omni全模态语音输入法", size: 11)
+        subtitle.maximumNumberOfLines = 1
+        let row = stack([wordmark, subtitle], spacing: 4)
         row.translatesAutoresizingMaskIntoConstraints = false; addSubview(row)
         NSLayoutConstraint.activate([
-            widthAnchor.constraint(equalToConstant: compact ? 146 : 174), heightAnchor.constraint(equalToConstant: compact ? 44 : 56),
-            row.leadingAnchor.constraint(equalTo: leadingAnchor), row.trailingAnchor.constraint(equalTo: trailingAnchor),
+            widthAnchor.constraint(equalToConstant: compact ? 146 : 174), heightAnchor.constraint(equalToConstant: compact ? 48 : 56),
+            row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: compact ? 0 : 16), row.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
             row.centerYAnchor.constraint(equalTo: centerYAnchor),
-            icon.widthAnchor.constraint(equalToConstant: compact ? 44 : 56), icon.heightAnchor.constraint(equalToConstant: compact ? 44 : 56),
-            wordmark.widthAnchor.constraint(equalToConstant: compact ? 96 : 112), wordmark.heightAnchor.constraint(equalToConstant: compact ? 18 : 21)
+            wordmark.widthAnchor.constraint(equalToConstant: 124), wordmark.heightAnchor.constraint(equalToConstant: 29)
         ])
     }
+    private func refreshWordmark() {
+        wordmark.image = Self.image(AppTheme.dark(effectiveAppearance) ? "NoASR-wordmark-dark.pdf" : "NoASR-wordmark.pdf")
+    }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); refreshWordmark() }
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); refreshWordmark() }
     required init?(coder: NSCoder) { fatalError() }
 }

@@ -1,6 +1,6 @@
 #!/bin/zsh
 # 打一个可以分给别人的安装包:构建 → 检查包里没有私人数据 → 生成 dmg → 签名 → Apple 公证 → 盖章。
-# 产物在 macos/dist/OneMore-<版本>.dmg。公证凭证需先执行一次:
+# 产物在 macos/dist/NoASR-<版本>.dmg。公证凭证需先执行一次:
 #   xcrun notarytool store-credentials voice-input --apple-id <你的 Apple ID 邮箱> --team-id <你的 Apple Team ID>
 # 只想看 dmg 长什么样、不公证:VOICE_INPUT_SKIP_NOTARIZE=1 ./release.command(文件名会带"未公证",不要发给别人)。
 set -euo pipefail
@@ -21,7 +21,7 @@ EOF
 fi
 
 ./build.command
-APP="$PWD/.build.noindex/OneMore.app"
+APP="$PWD/.build.noindex/NoASR.app"
 
 # 包里绝不能有配置、词库、历史或密钥。这些文件本来就只存在 ~/Library/Application Support/DaiwenVoiceInput,这里再兜一道底。
 if find "$APP" \( -name '*.json' -o -name '*.log' -o -name '*.mp3' -o -name '*.wav' \) | /usr/bin/grep -q .; then
@@ -36,19 +36,21 @@ fi
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
 DIST="$PWD/dist"
 STAGING="$DIST/staging"
-if [[ "$SKIP_NOTARIZE" == "1" ]]; then DMG="$DIST/OneMore-$VERSION-未公证.dmg"; else DMG="$DIST/OneMore-$VERSION.dmg"; fi
+if [[ "$SKIP_NOTARIZE" == "1" ]]; then DMG="$DIST/NoASR-$VERSION-未公证.dmg"; else DMG="$DIST/NoASR-$VERSION.dmg"; fi
 rm -rf "$STAGING" "$DMG"
 mkdir -p "$STAGING"
-ditto "$APP" "$STAGING/OneMore.app"
+ditto "$APP" "$STAGING/NoASR.app"
 ln -s /Applications "$STAGING/Applications"
 cp ../PRIVACY.md "$STAGING/数据与隐私说明.md"
+cp ../LICENSE "$STAGING/LICENSE"
+cp ../THIRD_PARTY.md "$STAGING/第三方说明.md"
 cat > "$STAGING/安装说明.txt" <<'EOF'
-OneMore · 安装说明
+NoASR · 安装说明
 
 要求:Apple 芯片的 Mac(M1 及以后),macOS 13 或更新。
 
-1. 把左边的"OneMore"拖到右边的 Applications 文件夹。
-2. 在"应用程序"里打开"OneMore",按引导走完三步:
+1. 把左边的"NoASR"拖到右边的 Applications 文件夹。
+2. 在"应用程序"里打开"NoASR",按引导走完三步:
    - 按引导开启麦克风、辅助功能、输入监控；屏幕录制仅在使用窗口截图时需要
    - 填自己的 API Key(阿里云百炼、小米 MiMo、火山、Gemini 任选一家,去对应网站申请)
    - 试着按一次快捷键说句话
@@ -63,7 +65,7 @@ API Key 作为凭据直接发送给配置的服务地址，请确认地址可信
 完整说明见安装包内“数据与隐私说明.md”。
 EOF
 
-hdiutil create -quiet -volname "OneMore" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
+hdiutil create -quiet -volname "NoASR" -srcfolder "$STAGING" -ov -format UDZO "$DMG"
 rm -rf "$STAGING"
 codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG"
 
