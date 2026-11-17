@@ -94,7 +94,7 @@ class SystemSnip(QAbstractNativeEventFilter):
         self._timer.timeout.connect(self._wait_release)
 
     def apply(self, cfg):
-        settings = (bool(cfg.get("screenshot_tool_enabled", True)),
+        settings = (bool(cfg.get("screenshot_tool_enabled", False)),
                     tuple(cfg.get("screenshot_hotkeys", ["alt+shift+a", "windows+shift+a"])),
                     cfg.get("hotkey", ""), cfg.get("dictionary_hotkey", ""))
         if settings == self._settings:

@@ -28,6 +28,22 @@ APP_VERSION = "1.0.0"  # 显示在设置窗口左下角;分发给别人时改这
 # route: direct 只直连(国内节点,不走 VPN 代理) / proxy_first 系统代理优先、连不上改直连 / proxy 只走系统代理。
 # screenshot_models: 支持"音频 + 截图"同一请求的模型前缀,其他模型只发语音。
 PROVIDERS = {
+    "volcano": {
+        "name": "火山方舟",
+        "kind": "openai",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+        "model": "doubao-seed-2-1-lite-260915",
+        "audio_prefix": "",  # 火山要纯 base64,不带 data: 前缀
+        "extra_body": {"thinking": {"type": "disabled"}, "max_tokens": 8192},
+        "env_key": "ARK_API_KEY",
+        "route": "direct",
+        "models": {
+            "doubao-seed-2-1-lite-260915": "Seed 2.1 Lite",
+            "doubao-seed-2-0-lite-260428": "Seed 2.0 Lite",
+            "doubao-seed-2-0-mini-260428": "Seed 2.0 Mini",
+        },
+        "screenshot_models": ("doubao-seed-",),
+    },
     "bailian_cn": {
         "name": "百炼·北京",
         "kind": "openai",
@@ -37,23 +53,6 @@ PROVIDERS = {
         "extra_body": {"modalities": ["text"], "enable_thinking": False},
         "env_key": "DASHSCOPE_CN_API_KEY",
         "route": "direct",
-        "models": {
-            "qwen3-omni-flash": "Qwen3 Omni Flash",
-            "qwen3.5-omni-flash": "Qwen3.5 Omni Flash(最快)",
-            "qwen3.8-omni-flash": "Qwen3.8 Omni Flash(最便宜)",
-        },
-        "screenshot_models": ("qwen3.5-omni", "qwen3.8-omni"),
-    },
-    "bailian": {
-        "name": "百炼·新加坡",
-        "kind": "openai",
-        "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-        "model": "qwen3.5-omni-flash",
-        "audio_prefix": "data:;base64,",  # 百炼不认带 mime 的写法也能用,保持已验证的形式
-        # 转写不需要思考:统一关闭思考模式(3.8 默认开启,不关一句话要 5 秒)
-        "extra_body": {"modalities": ["text"], "enable_thinking": False},
-        "env_key": "DASHSCOPE_API_KEY",
-        "route": "proxy_first",  # 海外节点走 VPN 更快;VPN 没开时退回直连
         "models": {
             "qwen3-omni-flash": "Qwen3 Omni Flash",
             "qwen3.5-omni-flash": "Qwen3.5 Omni Flash(最快)",
@@ -89,22 +88,6 @@ PROVIDERS = {
         },
         "screenshot_models": ("gemini-",),
     },
-    "volcano": {
-        "name": "火山方舟",
-        "kind": "openai",
-        "base_url": "https://ark.cn-beijing.volces.com/api/v3",
-        "model": "doubao-seed-2-1-lite-260915",
-        "audio_prefix": "",  # 火山要纯 base64,不带 data: 前缀
-        "extra_body": {"thinking": {"type": "disabled"}, "max_tokens": 8192},
-        "env_key": "ARK_API_KEY",
-        "route": "direct",
-        "models": {
-            "doubao-seed-2-1-lite-260915": "Seed 2.1 Lite",
-            "doubao-seed-2-0-lite-260428": "Seed 2.0 Lite",
-            "doubao-seed-2-0-mini-260428": "Seed 2.0 Mini",
-        },
-        "screenshot_models": ("doubao-seed-",),
-    },
 }
 
 
@@ -124,17 +107,17 @@ def supports_screenshot(provider, model):
 DEFAULT_PROMPT = '你是用户的表达助手，录音是用户的原始说话内容，请理解说话内容后，帮助他进行流畅表达，请直接输出优化后的内容结果，其他信息一概不要输出，比如你的思考过程、你对结果的补充描述等等。\n\n背景（这段不要输出）：录音中可能包含口头禅、语气词重复、停顿与思考过程，语句也可能断断续续。请在不改变原意的前提下，将内容整理为通顺、连贯、不废话、符合表达习惯的语句，同时保留必要的语义完整性与自然节奏，避免过度删减导致信息丢失。根据内容自然分段，不同话题或要点之间空一行；短内容不必强行分段。"呃、嗯、啊、那个、这个、然后"这类语气词和口头禅一律删掉，重复的词只保留一次\n\n硬性约束（违反比不整理更糟）：\n1. 不得改变肯定/否定。原话说"是、要、能、有"，就不能写成"不是、不要、不能、没有"；反之同理。\n2. 不得改变数量、程度、范围、时间和主语。\n3. 不得替用户推断结论；拿不准的地方原样保留，宁可口语化。\n4. 只允许：删语气词、去重复、补标点、顺句子。不允许换词、不允许改写立场。'
 
 DEFAULTS = {
-    "provider": "bailian",
+    "provider": "volcano",
     "providers": {k: {"api_key": "", "base_url": v["base_url"], "model": v["model"]}
                   for k, v in PROVIDERS.items()},
-    "volcano_fast": False,  # 火山 Fast 低延迟档(需在火山控制台开通)
+    "volcano_fast": True,  # 火山 Fast 低延迟档(需在火山控制台开通)
     "hotkey": "left ctrl",
     "mode": "both",  # hold 按住说话 / toggle 单击切换 / both 短按切换、长按说话
     "strip_trailing_punct": True,
     "app_context": True,  # 把当前前台程序名和窗口标题附加到提示词
     "window_screenshot": False,  # 录音时附带当前窗口截图
     "screenshot_consent": False,  # 用户已看过截图说明并同意
-    "screenshot_tool_enabled": True,  # 附带工具:系统截图快捷键转发
+    "screenshot_tool_enabled": False,  # 附带工具:系统截图快捷键转发
     "screenshot_hotkeys": ["alt+shift+a", "windows+shift+a"],
     "mouse_longpress": True,  # 输入框内长按左键录音
     "device": "",  # 空字符串表示系统默认麦克风
@@ -142,7 +125,7 @@ DEFAULTS = {
     "autostart": True,
     "sound": True,
     "sound_volume": 0.85,
-    "sound_style": "bell",
+    "sound_style": "bubble",
     "overlay_position": "window",
     "appearance": "system",  # 外观:system 跟随系统 / light 浅色 / dark 深色
     # 个人词典:[{"word", "source": manual/hotkey/correction, "app": 添加时所在程序, "added", "last_hit"}]
@@ -152,9 +135,6 @@ DEFAULTS = {
     "dictionary_ignored": {},  # "错→对": 被忽略次数(2 次后不再问);"seen:错→对": 自动模式下见过的次数
     "history_enabled": True,
     "history_limit": 100,  # 0 表示永久保留
-    # 本机转写接口(asr_bridge.py,供本机其他应用使用):token 为空则不启动
-    "asr_bridge_port": 8095,
-    "asr_bridge_token": "",
 }
 HISTORY_LIMITS = (1, 3, 10, 50, 100, 0)
 SOUND_STYLES = {"bell": "铃声", "marimba": "木琴", "bubble": "气泡", "chime": "双音", "coin": "金币"}
@@ -170,10 +150,9 @@ def load_config():
             saved = json.load(f)
     except (OSError, ValueError):
         saved = {}
-    # 兼容旧版扁平配置(只有百炼)
-    legacy = {k: saved.pop(k) for k in ("api_key", "base_url", "model") if k in saved}
-    if legacy:
-        saved.setdefault("providers", {}).setdefault("bailian", {}).update(legacy)
+    # 旧版扁平配置属于已移除的新加坡节点，不把旧密钥迁往其他服务。
+    for key in ("api_key", "base_url", "model", "asr_bridge_port", "asr_bridge_token"):
+        saved.pop(key, None)
     for name, p in saved.pop("providers", {}).items():
         if name in cfg["providers"]:
             cfg["providers"][name].update(p)
@@ -184,11 +163,11 @@ def load_config():
     cfg["screenshot_hotkeys"] = list(dict.fromkeys(
         k.strip().lower() for k in cfg["screenshot_hotkeys"] if isinstance(k, str) and k.strip()))
     if cfg["provider"] not in PROVIDERS:
-        cfg["provider"] = "bailian"
+        cfg["provider"] = DEFAULTS["provider"]
     if cfg.get("history_limit") not in HISTORY_LIMITS:
         cfg["history_limit"] = 100
     if cfg.get("sound_style") not in SOUND_STYLES:
-        cfg["sound_style"] = "bell"
+        cfg["sound_style"] = DEFAULTS["sound_style"]
     if not isinstance(cfg.get("dictionary"), list):
         cfg["dictionary"] = []
     cfg["dictionary"] = [e for e in cfg["dictionary"] if isinstance(e, dict) and str(e.get("word", "")).strip()]

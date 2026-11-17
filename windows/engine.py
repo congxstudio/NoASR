@@ -63,7 +63,7 @@ def _wasapi_output():
     return None
 
 
-def play_cue(start, style="bell", volume=0.85):
+def play_cue(start, style="bubble", volume=0.85):
     """提示音走 WASAPI 低延迟输出(约 3~10ms;老的 MME 默认缓冲约 180ms),失败时退回默认通道。
     输出和录音是两个独立的通道,播放不影响录音。"""
     data = cues.cue(style, start) * float(volume)
@@ -636,7 +636,7 @@ class Engine(QObject):
         cfg = self._session or self.cfg
         recognition.network.warmup(cfg["provider"], config.active_provider(cfg)[0])  # 确认不是误触后再预热连接
         if cfg.get("sound", True):
-            play_cue(True, cfg.get("sound_style", "bell"), cfg.get("sound_volume", 0.85))
+            play_cue(True, cfg.get("sound_style", "bubble"), cfg.get("sound_volume", 0.85))
 
     def _end(self):
         with self._lock:
@@ -658,7 +658,7 @@ class Engine(QObject):
             self.state.emit("idle", "")  # 误触(如 Ctrl+C)静默丢弃
             return
         if cfg.get("sound", True):
-            play_cue(False, cfg.get("sound_style", "bell"), cfg.get("sound_volume", 0.85))
+            play_cue(False, cfg.get("sound_style", "bubble"), cfg.get("sound_volume", 0.85))
         self.state.emit("processing", "识别中")
         send, self._send_enter = self._send_enter, False
         threading.Thread(target=self._process, daemon=True,

@@ -57,7 +57,7 @@ final class VoiceApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var context = ""
     var volume: Double = 0
     var lastPermissions = [Bool]()
-    let providerTitles = ["bailian_cn": "百炼·北京", "bailian": "百炼·新加坡", "mimo": "小米 MiMo", "gemini": "Gemini", "volcano": "火山方舟"]
+    let providerTitles = Provider.titles
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppTheme.apply(settings.appearance)
@@ -191,6 +191,17 @@ final class VoiceApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
             return
         }
+        // 仅正式版首次正常启动创建自启项；预览和自动检查不修改系统设置。
+        if !Paths.isDevelopment, !CommandLine.arguments.dropFirst().contains(where: { $0.hasPrefix("--") }),
+           !FileManager.default.fileExists(atPath: Paths.config.path) {
+            if settings.autostart && !Startup.enabled {
+                do { try Startup.set(true) }
+                catch { Paths.log("首次启动设置登录自启失败"); showError("登录自启未开启，可在设置中重试") }
+            }
+            settings.autostart = Startup.enabled
+            do { try settings.save() }
+            catch { Paths.log("首次启动配置保存失败") }
+        }
         if !Permission.allGranted || settings.active.api_key.isEmpty { openOnboarding() }
         if CommandLine.arguments.contains("--smoke-test") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { Paths.log("原生应用启动检查通过"); NSApp.terminate(nil) }
@@ -226,8 +237,8 @@ final class VoiceApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
         microphoneMenu = NSMenu(); microphoneMenu.delegate = self; microphone.submenu = microphoneMenu; menu.addItem(microphone)
         let provider = NSMenuItem(title: "识别服务", action: nil, keyEquivalent: "")
         providerMenu = NSMenu(); provider.submenu = providerMenu; menu.addItem(provider)
-        for key in ["bailian_cn", "bailian", "mimo", "gemini", "volcano"] {
-            let item = NSMenuItem(title: providerTitles[key]!, action: #selector(chooseProvider(_:)), keyEquivalent: "")
+        for key in Provider.order {
+            let item = NSMenuItem(title: providerTitles[key]! + (key == "volcano" ? "（推荐）" : ""), action: #selector(chooseProvider(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = key; providerMenu.addItem(item)
         }
         soundItem = NSMenuItem(title: "提示音", action: #selector(toggleSound), keyEquivalent: ""); soundItem.target = self; menu.addItem(soundItem)
@@ -820,6 +831,8 @@ if CommandLine.arguments.contains("--self-test") {
     check((try? HotkeyMonitor.parse("ctrl+shift+space"))?.count == 3,"组合热键")
     check((try? HotkeyMonitor.parse("invalid key")) == nil,"拒绝无效热键")
     check(Settings().mode == "both","默认同时支持短按和长按")
+    do { try SettingsTests.run(); print("PASS: 默认配置与旧配置兼容") }
+    catch { fputs("FAIL: 默认配置与旧配置兼容：\(error.localizedDescription)\n", stderr); exit(1) }
     do {
         var g = EchoGuard(previous: "可以理解为，现在给你接上之后，你等同于拥有了多模态整个的API能力，是吗")
         var out = ""
@@ -882,13 +895,13 @@ if CommandLine.arguments.contains("--self-test") {
     }
     check(Recognition.looksLikeNoSpeech("没有清晰说话内容") && Recognition.looksLikeNoSpeech("（无法识别的语音）") && Recognition.looksLikeNoSpeech("。") && Recognition.looksLikeNoSpeech("空") && Recognition.looksLikeNoSpeech("（空字符串）"),"模型描述“没听清”不当作结果")
     check(!Recognition.looksLikeNoSpeech("是") && !Recognition.looksLikeNoSpeech("我没有收到他的录音文件,你再发一次吧") && !Recognition.looksLikeNoSpeech("今天没有会"),"正常短句和含“没有”的长句不误判")
-    check(Settings().active.model == "qwen3.5-omni-flash" && Settings().prompt.contains("表达助手"),"默认模型 3.5 与新默认提示词")
+    check(Settings().active.model == "doubao-seed-2-1-lite-260915" && Settings().prompt.contains("表达助手"),"默认火山模型与表达助手提示词")
     var hold = MouseHoldGesture(); hold.begin(.zero)
     check(!hold.rightClick() && !hold.enter,"未开始录音时右键不拦截")
     hold.active = true
     check(hold.rightClick() && hold.enter,"录音中右键记为自动回车")
     hold.reset(); check(!hold.enter,"结束后清除回车标记")
-    check(Cues.validStyle(nil) == "bell" && Cues.validStyle("无效") == "bell" && Cues.validStyle("marimba") == "marimba","提示音音色校验")
+    check(Cues.validStyle(nil) == "bubble" && Cues.validStyle("无效") == "bubble" && Cues.validStyle("marimba") == "marimba","提示音音色校验")
     for (key, _) in Cues.styles {
         let start = Cues.audio(start: true, style: key), stop = Cues.audio(start: false, style: key)
         check(start.count > 2000 && stop.count > 2000 && (try? AVAudioPlayer(data: start)) != nil && (try? AVAudioPlayer(data: stop)) != nil,"提示音音色可生成并可播放: \(key)")
@@ -1008,7 +1021,7 @@ if let index = CommandLine.arguments.firstIndex(of: "--benchmark-transcription")
             let prepared = try AudioPreparation.prepare(copy)
             defer { try? FileManager.default.removeItem(at:prepared.url) }
             print("Audio: \(prepared.rawBytes)B -> \(prepared.bytes)B prep=\(prepared.preparationMS)ms")
-            // --provider bailian|bailian_cn|mimo 可指定服务商,便于对比线路;不传则用设置里的当前服务商。
+            // --provider volcano|bailian_cn|mimo|gemini 可指定服务商,便于对比线路;不传则用设置里的当前服务商。
             var settings = Settings.load()
             if let flag = CommandLine.arguments.firstIndex(of: "--provider"), CommandLine.arguments.count > flag + 1, Provider.defaults[CommandLine.arguments[flag+1]] != nil {
                 settings.provider = CommandLine.arguments[flag+1]

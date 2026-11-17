@@ -19,7 +19,7 @@ enum AudioSpeedBenchmark {
         let history = try JSONDecoder().decode([HistoryEntry].self, from: Data(contentsOf: Paths.history))
         let base = Settings.load()
         var selected: [HistoryEntry] = []
-        for provider in ["bailian", "bailian_cn"] {
+        for provider in ["bailian_cn"] {
             if let entry = history.filter({ $0.provider == provider && !$0.text.isEmpty && $0.statistics?.estimatedCNY != nil })
                 .sorted(by: { $0.text.count > $1.text.count }).first { selected.append(entry) }
         }

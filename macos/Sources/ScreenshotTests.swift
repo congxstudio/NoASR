@@ -26,7 +26,7 @@ enum ScreenshotTests {
         try check(WindowScreenshot.dimensions(CGSize(width: 300, height: 200)).0 == 300, "小图不放大")
         try check(WindowScreenshot.dimensions(CGSize(width: 900, height: 4000)).1 == 1280, "竖屏限制最长边")
         let audio = root.appendingPathComponent("fixture.wav"); try Data([0, 1, 2]).write(to: audio)
-        for provider in ["bailian_cn", "bailian", "mimo"] {
+        for provider in ["volcano", "bailian_cn", "mimo"] {
             var settings = Settings(); settings.provider = provider; settings.prompt = "fixture"; settings.app_context = false
             let request = try Recognition.request(audio: audio, settings: settings, context: "fixture", screenshot: data)
             let body = try JSONSerialization.jsonObject(with: request.httpBody!) as! [String: Any]
@@ -42,7 +42,7 @@ enum ScreenshotTests {
             let plainMessages = plainBody["messages"] as! [[String: Any]]
             try check(!(plainMessages[0]["content"] as! String).contains("附图"), "无截图时不追加图片规则")
         }
-        var unsupported = Settings(); unsupported.providers[unsupported.provider]!.model = "qwen3-omni-flash"
+        var unsupported = Settings(); unsupported.provider = "bailian_cn"; unsupported.providers[unsupported.provider]!.model = "qwen3-omni-flash"
         try check(!Recognition.supportsScreenshot(unsupported), "旧模型不混传图片音频")
         let legacy = HistoryEntry(text: "fixture", error: "", audio: "fixture.wav", model: "fixture")
         var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacy)) as! [String: Any]
