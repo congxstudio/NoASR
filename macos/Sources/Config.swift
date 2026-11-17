@@ -13,8 +13,9 @@ struct Provider: Codable {
         default: return id
         }
     }
+    static let order = ["volcano", "bailian_cn", "mimo", "gemini"]
+    static let titles = ["volcano": "火山方舟", "bailian_cn": "百炼·北京", "mimo": "小米 MiMo", "gemini": "Gemini"]
     static let defaults = [
-        "bailian": Provider(base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", model: "qwen3.5-omni-flash"),
         "bailian_cn": Provider(base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen3.5-omni-flash"),
         "mimo": Provider(base_url: "https://api.xiaomimimo.com/v1", model: "mimo-v2.6-flash"),
         "volcano": Provider(base_url: "https://ark.cn-beijing.volces.com/api/v3", model: "doubao-seed-2-1-lite-260915"),
@@ -24,11 +25,11 @@ struct Provider: Codable {
 
 struct Settings: Codable {
     var appearance = "system"
-    var provider = "bailian"
+    var provider = "volcano"
     var providers = Provider.defaults
-    var volcano_fast = false
-    var screenshot_tool_enabled = true
-    var screenshot_markup = false
+    var volcano_fast = true
+    var screenshot_tool_enabled = false
+    var screenshot_markup = true
     var screenshot_hotkey = "command+shift+a"
     var screenshot_hotkey_secondary = "option+shift+s"
     var dictionary_hotkey = "control+option+d"   // 选中文字加入词典
@@ -41,7 +42,7 @@ struct Settings: Codable {
     var overlay_position = "window"
     static let legacyPrompt = "请把这段语音逐字转写为文字,只输出转写结果,不要解释。保留原语言,自动补全标点。"
     var prompt = "你是用户的表达助手，录音是用户的原始说话内容，请理解说话内容后，帮助他进行流畅表达，请直接输出优化后的内容结果，其他信息一概不要输出，比如你的思考过程、你对结果的补充描述等等。\n\n背景（这段不要输出）：录音中可能包含口头禅、语气词重复、停顿与思考过程，语句也可能断断续续。请在不改变原意的前提下，将内容整理为通顺、连贯、不废话、符合表达习惯的语句，同时保留必要的语义完整性与自然节奏，避免过度删减导致信息丢失。根据内容自然分段，不同话题或要点之间空一行；短内容不必强行分段。\"呃、嗯、啊、那个、这个、然后\"这类语气词和口头禅一律删掉，重复的词只保留一次\n\n硬性约束（违反比不整理更糟）：\n1. 不得改变肯定/否定。原话说\"是、要、能、有\"，就不能写成\"不是、不要、不能、没有\"；反之同理。\n2. 不得改变数量、程度、范围、时间和主语。\n3. 不得替用户推断结论；拿不准的地方原样保留，宁可口语化。\n4. 只允许：删语气词、去重复、补标点、顺句子。不允许换词、不允许改写立场。"
-    var strip_trailing_punct = false
+    var strip_trailing_punct = true
     var app_context = true
     var screenshot_consent = false
     var window_screenshot = false
@@ -54,14 +55,14 @@ struct Settings: Codable {
     var screenshot_authorization_pending = false
     var sound = true
     var sound_volume = 0.85
-    var sound_style = "bell"
-    var autostart = false
-    var active: Provider { providers[provider] ?? Provider.defaults["bailian"]! }
+    var sound_style = "bubble"
+    var autostart = true
+    var active: Provider { providers[provider] ?? Provider.defaults["volcano"]! }
 
-    static func load() -> Settings {
+    static func load(file: URL = Paths.config, environment: [String: String] = ProcessInfo.processInfo.environment) -> Settings {
         // 只迁移已有的服务配置与密钥;原生版交互默认支持短按和长按。
-        guard let data = try? Data(contentsOf: Paths.config),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return Settings() }
+        let data = (try? Data(contentsOf: file)) ?? Data()
+        let object = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
         var value = Settings()
         if let appearance = object["appearance"] as? String, ["system", "light", "dark"].contains(appearance) { value.appearance = appearance }
         if let name = object["provider"] as? String, Provider.defaults[name] != nil { value.provider = name }
@@ -72,9 +73,10 @@ struct Settings: Codable {
                 if let model = fields["model"] { value.providers[key]!.model = model }
             }
         }
-        value.volcano_fast = object["volcano_fast"] as? Bool ?? false
-        value.screenshot_tool_enabled = object["screenshot_tool_enabled"] as? Bool ?? true
-        value.screenshot_markup = object["screenshot_markup"] as? Bool ?? false
+        value.volcano_fast = object["volcano_fast"] as? Bool ?? true
+        value.screenshot_tool_enabled = object["screenshot_tool_enabled"] as? Bool ?? false
+        value.screenshot_markup = object["screenshot_markup"] as? Bool ?? true
+        value.autostart = object["autostart"] as? Bool ?? true
         value.screenshot_hotkey = object["screenshot_hotkey"] as? String ?? value.screenshot_hotkey
         value.screenshot_hotkey_secondary = object["screenshot_hotkey_secondary"] as? String ?? (value.screenshot_hotkey == "option+shift+s" ? "command+shift+a" : "option+shift+s")
         value.dictionary_hotkey = object["dictionary_hotkey"] as? String ?? value.dictionary_hotkey
@@ -101,13 +103,12 @@ struct Settings: Codable {
         let rate = object["audio_speed_rate"] as? Double ?? 1.25
         value.audio_speed_rate = AudioSpeed.rates.contains(rate) ? rate : 1.25
         value.screenshot_authorization_pending = object["screenshot_authorization_pending"] as? Bool ?? false
-        value.strip_trailing_punct = object["strip_trailing_punct"] as? Bool ?? false
+        value.strip_trailing_punct = object["strip_trailing_punct"] as? Bool ?? true
         if object["native_version"] != nil { value.mode = object["mode"] as? String ?? "both" }
-        if value.providers["bailian"]!.api_key.isEmpty { value.providers["bailian"]!.api_key = ProcessInfo.processInfo.environment["DASHSCOPE_API_KEY"] ?? "" }
-        if value.providers["bailian_cn"]!.api_key.isEmpty { value.providers["bailian_cn"]!.api_key = ProcessInfo.processInfo.environment["DASHSCOPE_CN_API_KEY"] ?? "" }
-        if value.providers["mimo"]!.api_key.isEmpty { value.providers["mimo"]!.api_key = ProcessInfo.processInfo.environment["MIMO_API_KEY"] ?? "" }
-        if value.providers["gemini"]!.api_key.isEmpty { value.providers["gemini"]!.api_key = ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? "" }
-        if value.providers["volcano"]!.api_key.isEmpty { value.providers["volcano"]!.api_key = ProcessInfo.processInfo.environment["ARK_API_KEY"] ?? "" }
+        if value.providers["bailian_cn"]!.api_key.isEmpty { value.providers["bailian_cn"]!.api_key = environment["DASHSCOPE_CN_API_KEY"] ?? "" }
+        if value.providers["mimo"]!.api_key.isEmpty { value.providers["mimo"]!.api_key = environment["MIMO_API_KEY"] ?? "" }
+        if value.providers["gemini"]!.api_key.isEmpty { value.providers["gemini"]!.api_key = environment["GEMINI_API_KEY"] ?? "" }
+        if value.providers["volcano"]!.api_key.isEmpty { value.providers["volcano"]!.api_key = environment["ARK_API_KEY"] ?? "" }
         return value
     }
 

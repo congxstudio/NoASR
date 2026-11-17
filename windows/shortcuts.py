@@ -82,7 +82,7 @@ def validate_candidate(cfg, text, role, index=None):
         raise ValueError("和录音快捷键重复了，请换一个")
     if role != "dictionary" and overlaps(name, cfg.get("dictionary_hotkey", "")):
         raise ValueError("和词典快捷键重复了，请换一个")
-    if cfg.get("screenshot_tool_enabled", True):
+    if cfg.get("screenshot_tool_enabled", False):
         for i, other in enumerate(cfg.get("screenshot_hotkeys", [])):
             if role == "screenshot" and i == index:
                 continue

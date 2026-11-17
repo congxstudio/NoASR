@@ -13,7 +13,6 @@ from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 import config
 import engine as engine_mod
 from engine import Engine
-from asr_bridge import Bridge
 from learn import Learner
 from mouse_trigger import MouseTrigger
 from system_snip import SystemSnip
@@ -101,8 +100,6 @@ class App(QObject):  # 继承 QObject,后台线程发来的信号会自动排队
         self._mic_notify = True
         self.learner = Learner(self)
         self.learner.register_hotkey()
-        self.bridge = Bridge(self.engine)
-        self.bridge.apply(self.cfg)
         self.mouse = MouseTrigger(self.engine)
         if self.cfg.get("mouse_longpress"):
             self.mouse.start()
@@ -142,7 +139,6 @@ class App(QObject):  # 继承 QObject,后台线程发来的信号会自动排队
         on = self.cfg.get("mouse_longpress", False)
         self.mouse.start() if on else self.mouse.stop()
         self.learner.register_hotkey()
-        self.bridge.apply(self.cfg)
         self.system_snip.apply(self.cfg)
         self._refresh_status()
 
@@ -243,7 +239,8 @@ class App(QObject):  # 继承 QObject,后台线程发来的信号会自动排队
         group = QActionGroup(m)
         for key, meta in config.PROVIDERS.items():
             has_key = bool(self.cfg["providers"][key]["api_key"])
-            act = QAction(meta["name"] + ("" if has_key else "（未填 Key）"), m, checkable=True)
+            act = QAction(meta["name"] + ("（推荐）" if key == "volcano" else "")
+                          + ("" if has_key else "（未填 Key）"), m, checkable=True)
             act.setChecked(key == self.cfg["provider"])
             act.triggered.connect(lambda _c=False, k=key: self.switch_provider(k))
             group.addAction(act)
@@ -347,7 +344,6 @@ class App(QObject):  # 继承 QObject,后台线程发来的信号会自动排队
     def quit(self):
         self.system_snip.stop()
         self.learner.stop()
-        self.bridge.stop()
         self.mouse.stop()
         self.engine.stop()
         self.tray.hide()

@@ -737,11 +737,12 @@ class Segmented(QWidget):
     """分段选择:选中项是一块白色玻璃。"""
     changed = Signal(str)
 
-    def __init__(self, options, current, px=13):
+    def __init__(self, options, current, px=13, recommended=None):
         super().__init__()
         self.options = list(options.items())
         self.current = current
         self.px = px
+        self.recommended = recommended
         self.setFixedHeight(36)
         self.setCursor(Qt.PointingHandCursor)
         self.setMinimumWidth(len(self.options) * 64)
@@ -777,7 +778,16 @@ class Segmented(QWidget):
             else:
                 p.setFont(font(self.px))
                 p.setPen(C("seg_text"))
-            p.drawText(cell.adjusted(0, 0, 0, -1), Qt.AlignCenter, text)
+            title = cell.adjusted(0, 6 if key == self.recommended else 0, 0, -1)
+            p.drawText(title, Qt.AlignCenter, text)
+            if key == self.recommended:
+                badge = QRectF(cell.right() - 31, cell.top() + 3, 26, 12)
+                p.setPen(Qt.NoPen)
+                p.setBrush(C("toggle_on_bottom"))
+                p.drawRoundedRect(badge, 4, 4)
+                p.setPen(C("knob_on"))
+                p.setFont(font(8, QFont.DemiBold))
+                p.drawText(badge, Qt.AlignCenter, "推荐")
 
 
 class ThemeSwitch(QWidget):
@@ -1527,7 +1537,7 @@ class SettingsWindow(ImmersiveWindow):
     def _build_service(self):
         w, lay = page("模型配置")
         names = {k: v["name"] for k, v in config.PROVIDERS.items()}
-        self.provider = Segmented(names, "bailian", px=12.5)
+        self.provider = Segmented(names, "volcano", px=12.5, recommended="volcano")
         self.provider.changed.connect(self._provider_changed)
         self.key = QLineEdit()
         self.key.setEchoMode(QLineEdit.Password)
@@ -1592,7 +1602,7 @@ class SettingsWindow(ImmersiveWindow):
             self.model.addItem(title, model_id)
         self.model.setCurrentIndex(max(0, self.model.findData(p["model"])))
         self.fast_row.setVisible(key == "volcano")
-        self.fast.setChecked(cfg.get("volcano_fast", False))
+        self.fast.setChecked(cfg.get("volcano_fast", True))
         self._loading = False
 
     def _model_id(self):
@@ -1668,7 +1678,7 @@ class SettingsWindow(ImmersiveWindow):
 
         self.sound = Toggle()
         self.sound.toggled.connect(lambda v: self._set("sound", v))
-        self.style_ = Segmented(config.SOUND_STYLES, "bell")
+        self.style_ = Segmented(config.SOUND_STYLES, "bubble")
         self.style_.changed.connect(lambda k: (self._set("sound_style", k), self._preview()))
         self.volume = QSlider(Qt.Horizontal)
         self.volume.setFixedHeight(26)  # 圆点直径 20,留出上下空间,否则会被裁掉
@@ -1740,15 +1750,15 @@ class SettingsWindow(ImmersiveWindow):
         self.mode.set_current(cfg.get("mode", "both"))
         self.mode_hint.setText(MODE_HINTS[cfg.get("mode", "both")])
         self.mouse.setChecked(cfg.get("mouse_longpress", False))
-        self.strip.setChecked(cfg.get("strip_trailing_punct", False))
-        self.autostart.setChecked(cfg.get("autostart", False))
+        self.strip.setChecked(cfg.get("strip_trailing_punct", True))
+        self.autostart.setChecked(cfg.get("autostart", True))
         self.theme.set_current(cfg.get("appearance", "system"))
         if self.prompt.toPlainText() != cfg["prompt"]:
             self.prompt.setPlainText(cfg["prompt"])
         self.app_context.setChecked(cfg.get("app_context", True))
         self.shot.setChecked(cfg.get("window_screenshot", False))
         self.sound.setChecked(cfg.get("sound", True))
-        self.style_.set_current(cfg.get("sound_style", "bell"))
+        self.style_.set_current(cfg.get("sound_style", "bubble"))
         self.volume.setValue(round(cfg.get("sound_volume", 0.85) * 100))
         self.volume_label.setText(f"{self.volume.value()}%")
         self.position.set_current(cfg.get("overlay_position", "window"))
@@ -1790,7 +1800,7 @@ class ToolsPane(QWidget):
         self.refresh()
 
     def refresh(self):
-        enabled = self.ctl.cfg.get("screenshot_tool_enabled", True)
+        enabled = self.ctl.cfg.get("screenshot_tool_enabled", False)
         self.enabled.blockSignals(True)
         self.enabled.setChecked(enabled)
         self.enabled.blockSignals(False)
@@ -2282,7 +2292,9 @@ class HistoryPane(QWidget):
             line.addWidget(fold, 0, Qt.AlignTop)
         card.add(line)
         st = e.get("stats") or {}
-        provider_name = config.PROVIDERS.get(e.get("provider", ""), {}).get("name", "")
+        # 旧历史仍展示原服务名，但不把已移除的节点放回可选列表。
+        provider_name = ("百炼·新加坡（已移除）" if e.get("provider") == "bailian"
+                         else config.PROVIDERS.get(e.get("provider", ""), {}).get("name", ""))
         tier = ""
         if st.get("fast_fallback"):
             tier = " · 常规（Fast 未开通）"
@@ -2539,7 +2551,7 @@ class OnboardingWindow(ImmersiveWindow):
 
         # 第 1 步
         names = {k: v["name"] for k, v in config.PROVIDERS.items()}
-        self.provider = Segmented(names, controller.cfg["provider"], px=12.5)
+        self.provider = Segmented(names, controller.cfg["provider"], px=12.5, recommended="volcano")
         self.provider.changed.connect(self._provider_changed)
         self.key = QLineEdit()
         self.key.setEchoMode(QLineEdit.Password)

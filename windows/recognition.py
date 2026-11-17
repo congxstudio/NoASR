@@ -1,6 +1,6 @@
 """云端识别:组装请求、流式接收、整理文字、统计耗时与费用。规则与 macos/Sources/Recognition.swift 对齐。
 
-- OpenAI 兼容服务(百炼北京/新加坡、MiMo、火山方舟)走 chat/completions;Gemini 走原生 streamGenerateContent。
+- OpenAI 兼容服务(百炼北京、MiMo、火山方舟)走 chat/completions;Gemini 走原生 streamGenerateContent。
 - 网络线路按服务商 route:direct 只直连 / proxy_first 代理优先、连不上改直连 / proxy 只走系统代理。
 - 直连强制 IPv4:本机网络 IPv6 不通,百炼北京、火山的域名会先解析出 IPv6,不强制的话要白等约 10 秒连接超时。
 - 日志不记录识别文字、请求正文和 API Key。
@@ -246,7 +246,7 @@ def build_request(cfg, audio, fmt, app="", screenshot=None, fast=None):
         **config.request_extra(meta, p["model"]),
     }
     if provider == "volcano":
-        use_fast = cfg.get("volcano_fast", False) if fast is None else fast
+        use_fast = cfg.get("volcano_fast", True) if fast is None else fast
         body["service_tier"] = "fast" if use_fast else "default"
     url = base + "/chat/completions"
     headers = {"Authorization": f"Bearer {p['api_key']}", "Content-Type": "application/json"}
@@ -350,7 +350,7 @@ def transcribe(cfg, audio, fmt, app="", screenshot=None, timing_origin=None, on_
     log.info("请求: provider=%s model=%s audio=%dB JSON=%dB 截图=%s", provider, p["model"],
              len(audio), len(data), "有" if screenshot is not None else "无")
 
-    transcript = StreamingTranscript(cfg.get("strip_trailing_punct", False))
+    transcript = StreamingTranscript(cfg.get("strip_trailing_punct", True))
     state = {"first": None, "usage": None, "tier": None, "finish": None, "gemini_done": False, "text": ""}
 
     def deliver(part):

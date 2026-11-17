@@ -369,14 +369,33 @@ final class GlassButton: NSButton {
     override func hitTest(_ point: NSPoint) -> NSView? { bounds.contains(convert(point, from: superview)) ? self : nil }
     override var isEnabled: Bool { didSet { text.textColor = isEnabled ? Glass.control : Glass.secondary } }
 }
+/// 独立子视图让角标始终位于玻璃选中背景上方，同时不影响点击。
+final class RecommendationBadge: NSView {
+    private let text = CATextLayer()
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.systemBlue.cgColor; layer?.cornerRadius = 4
+        text.string = "推荐"; text.fontSize = 8; text.alignmentMode = .center
+        text.foregroundColor = NSColor.white.cgColor
+        text.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
+        layer?.addSublayer(text)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func layout() { super.layout(); text.frame = bounds }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
 /// 玻璃分段选择:一条浅玻璃轨道,选中项是一块更白的玻璃。
 final class GlassSegmented: NSView {
     private var buttons: [NSButton] = []
     private let pill = GlassView(role: .pill)
     private var separators: [NSView] = []
+    private let recommendation = RecommendationBadge(frame: .zero)
+    private let recommended: Int?
     var target: AnyObject?; var action: Selector?
     var selectedSegment = 0 { didSet { refresh() } }
-    init(labels: [String], symbols: [String]? = nil) {
+    init(labels: [String], symbols: [String]? = nil, recommended: Int? = nil) {
+        self.recommended = recommended
         super.init(frame: .zero)
         wantsLayer = true
         layer?.backgroundColor = NSColor(srgbRed: 0.518, green: 0.561, blue: 0.62, alpha: 0.10).cgColor; layer?.cornerRadius = 13
@@ -397,6 +416,10 @@ final class GlassSegmented: NSView {
                 addSubview(line); separators.append(line)
             }
         }
+        if let recommended {
+            addSubview(recommendation)
+            buttons[recommended].setAccessibilityLabel(labels[recommended] + "，推荐")
+        }
         heightAnchor.constraint(equalToConstant: symbols == nil ? 42 : 34).isActive = true
         if symbols != nil {
             widthAnchor.constraint(equalToConstant: 102).isActive = true
@@ -412,7 +435,11 @@ final class GlassSegmented: NSView {
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
         let count = CGFloat(max(1, buttons.count)); let width = bounds.width / count
-        for (index, button) in buttons.enumerated() { button.frame = NSRect(x: CGFloat(index) * width, y: 0, width: width, height: bounds.height) }
+        for (index, button) in buttons.enumerated() {
+            let inset: CGFloat = index == recommended ? 6 : 0
+            button.frame = NSRect(x: CGFloat(index) * width, y: inset, width: width, height: bounds.height - inset)
+        }
+        if let recommended { recommendation.frame = CGRect(x: CGFloat(recommended + 1) * width - 31, y: 3, width: 26, height: 12) }
         for (index, line) in separators.enumerated() { line.frame = NSRect(x: CGFloat(index + 1) * width - 0.5, y: 11, width: 1, height: bounds.height - 22) }
         pill.frame = NSRect(x: CGFloat(selectedSegment) * width + 3, y: 3, width: width - 6, height: bounds.height - 6)
         pill.layoutSubtreeIfNeeded()
@@ -564,8 +591,8 @@ final class GlassToggle: NSButton {
 func toggle(_ on: Bool, target: AnyObject, action: Selector) -> GlassToggle {
     GlassToggle(on: on, target: target, action: action)
 }
-func segmented(_ labels: [String], selected: Int, target: AnyObject, action: Selector) -> GlassSegmented {
-    let control = GlassSegmented(labels: labels)
+func segmented(_ labels: [String], selected: Int, target: AnyObject, action: Selector, recommended: Int? = nil) -> GlassSegmented {
+    let control = GlassSegmented(labels: labels, recommended: recommended)
     control.target = target; control.action = action; control.selectedSegment = selected
     return control
 }
@@ -1333,7 +1360,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
     private var volcanoFastRow: NSView!
     private let geminiHint = note("通过系统代理连接 · 使用所选模型的最低推理等级", size: 11)
     private var providerName: String
-    private let providerKeys = ["bailian_cn", "bailian", "mimo", "gemini", "volcano"]
+    private let providerKeys = Provider.order
     private var sidebarButtons: [NSButton] = []
     private var sidebarHighlights: [GlassView] = []
     private var sidebarView: NSView?
@@ -1614,7 +1641,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
     }
 
     private func buildService() -> NSView {
-        providerControl = segmented(["百炼 · 北京", "百炼 · 新加坡", "小米 MiMo", "Gemini", "火山方舟"], selected: 0, target: self, action: #selector(providerChanged))
+        providerControl = segmented(Provider.order.map { Provider.titles[$0]! }, selected: 0, target: self, action: #selector(providerChanged), recommended: 0)
         apiKey.placeholderString = "输入 API Key"; apiKey.target = self; apiKey.action = #selector(changed)
         apiKey.setAccessibilityLabel("API Key")
         let check = button("测试连接", target: self, action: #selector(runCheck(_:)))
@@ -2112,7 +2139,7 @@ final class OnboardingWindow: NSWindowController, NSWindowDelegate {
     private var recordButton: GlassButton!
     private let keyLabel = label("", size: 13)
     private let keyHint = note("按一下开始，再按一下结束；也可以按住说话，松开结束。", size: 12)
-    private let providerKeys = ["bailian_cn", "bailian", "mimo", "gemini", "volcano"]
+    private let providerKeys = Provider.order
     private var permissionButtons: [GlassButton] = []
     private var permissionTimer: Timer?
     private var keyMonitor: Any?
@@ -2141,7 +2168,7 @@ final class OnboardingWindow: NSWindowController, NSWindowDelegate {
         headingIcon.imageScaling = .scaleProportionallyUpOrDown
         headingIcon.widthAnchor.constraint(equalToConstant: 48).isActive = true; headingIcon.heightAnchor.constraint(equalToConstant: 48).isActive = true
         let head = NSStackView(views: [headingIcon, stack([title, subtitle], spacing: 6), spring()]); head.spacing = 14; head.alignment = .centerY
-        providerControl = segmented(["百炼 · 北京", "百炼 · 新加坡", "小米 MiMo", "Gemini", "火山方舟"], selected: providerKeys.firstIndex(of: settings.provider) ?? 0, target: self, action: #selector(providerChanged))
+        providerControl = segmented(Provider.order.map { Provider.titles[$0]! }, selected: providerKeys.firstIndex(of: settings.provider) ?? 0, target: self, action: #selector(providerChanged), recommended: 0)
         apiKey.placeholderString = "输入 API Key"; apiKey.stringValue = previewOnly ? "" : settings.active.api_key
         apiKey.font = .systemFont(ofSize: 14); apiKey.isBordered = false; apiKey.drawsBackground = false; apiKey.focusRingType = .none
         tryBox.font = NSFont(name: "PingFangSC-Regular", size: 14); tryBox.isRichText = false; tryBox.drawsBackground = false; tryBox.textColor = Glass.text; tryBox.textContainerInset = NSSize(width: 12, height: 12)

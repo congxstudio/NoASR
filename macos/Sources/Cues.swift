@@ -3,11 +3,11 @@ import AVFoundation
 
 /// 程序内合成的短提示音,几种音色可在设置中切换,不依赖系统 Tink / Pop。
 enum Cues {
-    /// 顺序即设置下拉框的顺序;第一项为默认。
+    /// 顺序即设置下拉框的顺序；默认音色为气泡。
     static let styles: [(key: String, title: String)] = [
         ("bell", "铃声"), ("marimba", "木琴"), ("bubble", "气泡"), ("chime", "双音"), ("coin", "金币")
     ]
-    static func validStyle(_ key: String?) -> String { styles.contains { $0.key == key } ? key! : styles[0].key }
+    static func validStyle(_ key: String?) -> String { styles.contains { $0.key == key } ? key! : "bubble" }
 
     private static func envelope(_ x: Double, attack: Double, decay: Double) -> Double {
         x < 0 ? 0 : min(1, x / attack) * exp(-x / decay)
