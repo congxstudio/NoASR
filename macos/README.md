@@ -1,6 +1,14 @@
-# OneMore · macOS
+# NoASR · macOS
 
 Swift + 系统原生界面，菜单栏常驻。空闲时不占用麦克风。录音由配置的云端服务识别，数据流向、保存和删除方式见 [数据与隐私说明](../PRIVACY.md)。
+
+当前为采用 [MIT 协议](../LICENSE) 的早期源码预览版，尚未提供正式 Release 安装包。本地体验可从下方开发构建开始；已知限制见 [预览版指南](../docs/PREVIEW_GUIDE.md)。
+
+左下角显示 `v0.1.0 · 预览版`，完整内部版本号为 `0.1.0-preview.1`。
+
+客户端品牌区使用 NoASR 双色字标和「Omni全模态语音输入法」说明，应用图标为 N 与声波，强调色统一为品牌绿。兼容 bundle ID 与用户数据目录保持不变；2026-11-18 用户实机确认菜单栏图标、侧栏对齐及音量和麦克风控件颜色没有问题，后续仅补充副标题末尾「法」字，等待用户确认新文案。
+
+设置页默认内容区为 960×680 点，与 Windows 的 960×680 逻辑像素对齐；常规最小内容区为 820×560。小屏幕按可用空间缩小，并计入系统边框与屏幕边距。设置与首次引导共用此尺寸规则。
 
 ## 使用
 
@@ -44,7 +52,7 @@ Swift + 系统原生界面，菜单栏常驻。空闲时不占用麦克风。录
 VOICE_INPUT_LAME_LIBRARY=/你的路径/libmp3lame.0.dylib ./macos/build-dev.command
 ```
 
-产物位于 `macos/.build.noindex/OneMore Dev.app`。脚本使用明确的本地临时签名，不查询维护者证书，不安装到 Applications、不创建自启项、不申请系统权限，也不进行公证。默认运行不使用麦克风或网络的核心自检。
+产物位于 `macos/.build.noindex/NoASR Dev.app`。脚本使用明确的本地临时签名，不查询维护者证书，不安装到 Applications、不创建自启项、不申请系统权限，也不进行公证。默认运行不使用麦克风或网络的核心自检。
 
 开发应用使用独立标识 `com.daiwen.voice-input.development` 和独立数据目录 `~/Library/Application Support/OneMoreDevelopment/`，不会读取正式版 Key、词典和历史。需要界面调试时可手动打开产物，按需使用测试数据和自己的 Key。不要同时运行开发版与正式版，避免快捷键竞争；开发版禁止修改登录自启，避免覆盖正式版设置；也不要将其当正式安装包分发。临时签名重建后的系统权限可能需要重新处理。
 
@@ -58,7 +66,7 @@ VOICE_INPUT_LAME_LIBRARY=/你的路径/libmp3lame.0.dylib ./macos/build-dev.comm
 ./macos/install.command
 ```
 
-`install.command` 构建、验证后替换 `/Applications/OneMore.app`。只构建使用 `./macos/build.command`，产物位于 `.build.noindex/`。正式构建前必须通过 `VOICE_INPUT_CODESIGN_IDENTITY` 指定自己的证书身份（可用 security find-identity -v -p codesigning 查看）。证书不可用时明确失败，不自动退回本地临时签名。保留正式版 bundle ID 与数据路径以兼容既有安装。
+`install.command` 构建、验证后替换 `/Applications/NoASR.app`。只构建使用 `./macos/build.command`，产物位于 `.build.noindex/`。正式构建前必须通过 `VOICE_INPUT_CODESIGN_IDENTITY` 指定自己的证书身份（可用 security find-identity -v -p codesigning 查看）。证书不可用时明确失败，不自动退回本地临时签名。保留正式版 bundle ID 与数据路径以兼容既有安装。
 
 ## 分发给别人
 
@@ -66,21 +74,21 @@ VOICE_INPUT_LAME_LIBRARY=/你的路径/libmp3lame.0.dylib ./macos/build-dev.comm
 ./macos/release.command
 ```
 
-产物是 `macos/dist/OneMore-<版本>.dmg`,已签名并通过 Apple 公证,别人下载后直接双击就能装。dmg 包含 App、Applications 快捷方式、安装说明和数据与隐私说明;API Key、词典、历史都存在 `~/Library/Application Support/DaiwenVoiceInput/`,脚本会检查 App 包里没有任何 json、日志、录音或疑似密钥,有就停止。版本号改 `Info.plist` 里的 `CFBundleShortVersionString`。
+产物是 `macos/dist/NoASR-<版本>.dmg`,已签名并通过 Apple 公证,别人下载后直接双击就能装。dmg 包含 App、Applications 快捷方式、安装说明和数据与隐私说明;API Key、词典、历史都存在 `~/Library/Application Support/DaiwenVoiceInput/`,脚本会检查 App 包里没有任何 json、日志、录音或疑似密钥,有就停止。版本号改 `Info.plist` 里的 `CFBundleShortVersionString`。
 
 第一次用之前要把公证凭证存进钥匙串(只做一次):在 https://account.apple.com 生成一个 App 专用密码,然后执行 `xcrun notarytool store-credentials voice-input --apple-id <Apple ID 邮箱> --team-id <你的 Apple Team ID>`,按提示粘贴密码。没有凭证脚本会停下并打印这段说明。
 
 `VOICE_INPUT_SKIP_NOTARIZE=1` 可以跳过公证只看 dmg,文件名会带"未公证",别发给别人。目前只编 Apple 芯片版本,Intel Mac 装不上。
 证书缺失会停止构建,不会退回临时签名。每次构建验证签名并运行不使用麦克风或网络的核心自检。
 
-安装位置保持为 `/Applications/OneMore.app`。从旧的临时签名首次迁移到 Developer ID 时,系统可能需要重新授权一次；后续保持同一签名身份、应用标识和安装位置。
+安装位置保持为 `/Applications/NoASR.app`。从旧的临时签名首次迁移到 Developer ID 时,系统可能需要重新授权一次；后续保持同一签名身份、应用标识和 NoASR 安装位置；从 OneMore 迁移时更新已有自启路径。
 
 ```sh
-macos/.build.noindex/OneMore.app/Contents/MacOS/VoiceInput --self-test
+macos/.build.noindex/NoASR.app/Contents/MacOS/VoiceInput --self-test
 ```
 
 实际热键需要真实按键验证,不能以自检替代。麦克风、云端转写与自动输入也分别验证。
 
 界面检查不依赖屏幕录制权限：`--settings-preview` / `--onboarding-preview` / `--overlay-preview` 加 `--snapshot-dir <目录>`,程序会把各页面渲染成 PNG 后退出（需先退出正在运行的实例）。整窗渲染里可编辑文本框偶尔显示错字,是渲染方式的问题,单独渲染该控件正常。原生液态玻璃(NSGlassEffectView)渲染不进自截图,带 `--snapshot-dir` 时会退回自绘玻璃,只用于检查排版。
 
-- OneMore 品牌已同步 Windows：共用淡彩 OM 图标与无字体依赖的矢量字标；设置侧栏和首次引导展示品牌及「又一个语音输入法」副标题。应用、Dock、菜单提示和 dmg 使用 OneMore；保留原 bundle ID、可执行名、数据目录及自启标识。install.command 自动迁移旧「语音输入.app」安装与自启路径。
+- NoASR 品牌已同步 Windows：设置侧栏和首次引导使用双色矢量字标及「Omni全模态语音输入法」。应用、Dock、菜单提示和构建产物使用 NoASR；保留原 bundle ID、可执行名、数据目录及自启标识。install.command 兼容迁移旧 OneMore.app 和「语音输入.app」安装与自启路径。

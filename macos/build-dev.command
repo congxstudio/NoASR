@@ -17,14 +17,14 @@ fi
 if ! lipo -verify_arch "$ARCH" "$LAME_LIBRARY" >/dev/null 2>&1; then
   echo "LAME 动态库不包含本机架构 $ARCH，请使用匹配架构的库。"; exit 1
 fi
-APP="$PWD/.build.noindex/OneMore Dev.app"
+APP="$PWD/.build.noindex/NoASR Dev.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Icons" "$APP/Contents/Frameworks"
 xcrun swiftc -swift-version 5 -Onone -g -target "$ARCH-apple-macosx13.0" Sources/*.swift -o "$APP/Contents/MacOS/VoiceInput"
 cp Info.plist "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleIdentifier com.daiwen.voice-input.development' "$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleName OneMore Dev' "$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName OneMore Dev' "$APP/Contents/Info.plist"
-for asset in AppIcon.icns AppIcon.png OneMore-wordmark.pdf MenuBarOM.png; do
+/usr/libexec/PlistBuddy -c 'Set :CFBundleName NoASR Dev' "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleDisplayName NoASR Dev' "$APP/Contents/Info.plist"
+for asset in AppIcon.icns AppIcon.png NoASR-wordmark.pdf NoASR-wordmark-dark.pdf MenuBarNoASR.png; do
   cp "Assets/$asset" "$APP/Contents/Resources/$asset"
 done
 cp Assets/Icons/*.png "$APP/Contents/Resources/Icons/"

@@ -86,7 +86,7 @@ final class VoiceApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
         makeEditMenu()
         status = NSStatusBar.system.statusItem(withLength: 26)
         status.button?.image = BrandHeader.menuIcon()
-        status.button?.toolTip = "OneMore · 语音输入"
+        status.button?.toolTip = "NoASR · 语音输入"
         status.menu = buildMenu()
         recorder.onLevel = { [weak self] value in self?.volume = value }
         monitor.onEvent = { [weak self] event in self?.key(event) }
@@ -215,7 +215,7 @@ final class VoiceApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     func makeEditMenu() {
         let menu = NSMenu(); let application = NSMenuItem(); let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "退出 OneMore", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "退出 NoASR", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         application.submenu = appMenu; menu.addItem(application)
         let edit = NSMenuItem(); let actions = NSMenu(title: "编辑")
         actions.addItem(withTitle: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
@@ -612,14 +612,14 @@ final class VoiceApp: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     func updateMenu() {
         let symbol = ["starting": "waveform", "recording": "waveform", "processing": "mic.fill"][state] ?? "mic"
-        status.button?.image = state == "idle" ? BrandHeader.menuIcon() : NSImage(systemSymbolName: symbol, accessibilityDescription: "OneMore")
+        status.button?.image = state == "idle" ? BrandHeader.menuIcon() : NSImage(systemSymbolName: symbol, accessibilityDescription: "NoASR")
         let missing = Permission.granted.enumerated().filter { !$0.element }.map { Permission.names[$0.offset] }
         warningItem.isHidden = missing.isEmpty
         warningItem.title = missing.isEmpty ? "" : "\(missing.joined(separator: "、"))未开启 · 去开启"
         let header: String; let color: NSColor
         switch state {
         case "starting", "recording": header = "录音中 · 再按一次结束,Esc 取消"; color = .systemRed
-        case "processing": header = "识别中…"; color = .systemBlue
+        case "processing": header = "识别中…"; color = BrandPalette.accent
         default: header = "就绪 · \(settings.hotkey) 说话"; color = .systemGreen
         }
         let devices = Microphone.list()

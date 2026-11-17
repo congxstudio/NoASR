@@ -32,13 +32,22 @@ func host(_ content: NSView, in window: NSWindow, margin: CGFloat = 24) {
         content.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -margin)
     ])
 }
-/// 默认安装尺寸与最小尺寸分开；设置和初始化使用同一默认尺寸。
+/// 两端默认内容区统一为 960×680；小屏预留系统边框与屏幕边距。
 enum AppWindowLayout {
-    static let minimum = NSSize(width: 820, height: 550)
-    static var initialSize: NSSize {
+    private static var availableContentSize: NSSize {
         let visible = NSScreen.main?.visibleFrame.size ?? NSSize(width: 1440, height: 900)
-        return NSSize(width: min(890, max(minimum.width, visible.width - 48)),
-                      height: min(660, max(minimum.height, visible.height - 48)))
+        let unit = NSRect(x: 0, y: 0, width: 1, height: 1)
+        let frame = NSWindow.frameRect(forContentRect: unit, styleMask: [.titled, .fullSizeContentView]).size
+        return NSSize(width: max(1, visible.width - 32 - (frame.width - 1)),
+                      height: max(1, visible.height - 32 - (frame.height - 1)))
+    }
+    static var minimum: NSSize {
+        let available = availableContentSize
+        return NSSize(width: min(820, available.width), height: min(560, available.height))
+    }
+    static var initialSize: NSSize {
+        let available = availableContentSize
+        return NSSize(width: min(960, available.width), height: min(680, available.height))
     }
 }
 func makeWindow(title: String, width: CGFloat, height: CGFloat) -> NSWindow {
@@ -99,7 +108,7 @@ enum Glass {
     static let control = AppTheme.color(NSColor(srgbRed: 0.439, green: 0.463, blue: 0.482, alpha: 1), AppTheme.rgb(0.8, 0.85, 0.91))     // 按钮/分段文字 #70767b
     static let title = AppTheme.color(NSColor(srgbRed: 0.596, green: 0.623, blue: 0.663, alpha: 1), AppTheme.rgb(0.91, 0.94, 0.98))
     static let section = AppTheme.color(NSColor(srgbRed: 0.435, green: 0.455, blue: 0.482, alpha: 1), AppTheme.rgb(0.82, 0.87, 0.94))
-    static let segmentOn = AppTheme.color(NSColor(srgbRed: 0.361, green: 0.412, blue: 0.443, alpha: 1), AppTheme.rgb(0.91, 0.96, 1))
+    static let segmentOn = BrandPalette.accent
     static func style(_ layer: CALayer, alpha: CGFloat = 0.62, radius: CGFloat = 14, shadow: Bool = true) {
         layer.backgroundColor = NSColor.white.withAlphaComponent(alpha).cgColor
         layer.borderColor = NSColor.white.withAlphaComponent(0.92).cgColor; layer.borderWidth = 1
@@ -337,6 +346,7 @@ final class InsetHighlightLayer: CAGradientLayer {
 }
 /// 玻璃按钮:按钮本身不画,底下垫一块玻璃,文字放在玻璃里;点击仍由按钮接。
 final class GlassButton: NSButton {
+    private var primary = false
     private let glass = GlassView(role: .button)
     private let text = label("", size: 13)
     init(_ title: String, target: AnyObject?, action: Selector?) {
@@ -357,17 +367,14 @@ final class GlassButton: NSButton {
     required init?(coder: NSCoder) { fatalError() }
     func setTitle(_ title: String) { text.stringValue = title; setAccessibilityLabel(title); invalidateIntrinsicContentSize() }
     func usePrimaryStyle() {
-        // 网页 .onboarding-next：#edf7ffb0 → #b7d9f778，文字 #637c94。
-        glass.gradientOverride = [
-            NSColor(srgbRed: 237/255, green: 247/255, blue: 1, alpha: 176/255).cgColor,
-            NSColor(srgbRed: 183/255, green: 217/255, blue: 247/255, alpha: 120/255).cgColor
-        ]
-        text.textColor = AppTheme.color(NSColor(srgbRed: 99/255, green: 124/255, blue: 148/255, alpha: 1), AppTheme.rgb(0.80, 0.91, 1))
+        primary = true
+        glass.gradientOverride = [BrandPalette.green.cgColor, BrandPalette.green.cgColor]
+        text.textColor = isEnabled ? BrandPalette.ink : Glass.secondary
     }
     override var intrinsicContentSize: NSSize { NSSize(width: text.intrinsicContentSize.width + 30, height: 36) }
     // 玻璃层盖在按钮上面,点击要落回按钮本身。
     override func hitTest(_ point: NSPoint) -> NSView? { bounds.contains(convert(point, from: superview)) ? self : nil }
-    override var isEnabled: Bool { didSet { text.textColor = isEnabled ? Glass.control : Glass.secondary } }
+    override var isEnabled: Bool { didSet { text.textColor = isEnabled ? (primary ? BrandPalette.ink : Glass.control) : Glass.secondary } }
 }
 /// 独立子视图让角标始终位于玻璃选中背景上方，同时不影响点击。
 final class RecommendationBadge: NSView {
@@ -375,9 +382,9 @@ final class RecommendationBadge: NSView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.systemBlue.cgColor; layer?.cornerRadius = 4
+        layer?.backgroundColor = BrandPalette.green.cgColor; layer?.cornerRadius = 4
         text.string = "推荐"; text.fontSize = 8; text.alignmentMode = .center
-        text.foregroundColor = NSColor.white.cgColor
+        text.foregroundColor = BrandPalette.ink.cgColor
         text.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
         layer?.addSublayer(text)
     }
@@ -526,7 +533,7 @@ func row(_ title: String, _ subtitle: String = "", control: NSView, titleColor: 
     control.setContentCompressionResistancePriority(.required, for: .horizontal)
     return line
 }
-/// 自绘开关(照网页稿):开=蓝色渐变轨道,关=浅灰;白色圆滑块带阴影,切换有动画。
+/// 自绘开关:开=品牌绿色轨道,关=浅灰;白色圆滑块带阴影,切换有动画。
 final class GlassToggle: NSButton {
     private let track = CAGradientLayer()
     private let knob = CAGradientLayer()
@@ -576,17 +583,45 @@ final class GlassToggle: NSButton {
     private func render(animated: Bool) {
         let on = state == .on
         CATransaction.begin(); CATransaction.setAnimationDuration(animated ? 0.2 : 0)
-        track.colors = on ? [NSColor(srgbRed: 0.514, green: 0.78, blue: 1.0, alpha: 1).cgColor, NSColor(srgbRed: 0.263, green: 0.604, blue: 1.0, alpha: 1).cgColor]
+        track.colors = on ? [BrandPalette.green.cgColor, BrandPalette.green.cgColor]
                           : [NSColor(srgbRed: 0.796, green: 0.824, blue: 0.847, alpha: 1).cgColor, NSColor(srgbRed: 0.796, green: 0.824, blue: 0.847, alpha: 1).cgColor]
-        track.borderColor = (on ? NSColor(srgbRed: 0.412, green: 0.694, blue: 1.0, alpha: 1) : NSColor(srgbRed: 0.78, green: 0.824, blue: 0.863, alpha: 1)).cgColor
+        track.borderColor = (on ? BrandPalette.greenHover : NSColor(srgbRed: 0.78, green: 0.824, blue: 0.863, alpha: 1)).cgColor
         if AppTheme.dark(effectiveAppearance) {
-            track.colors = on ? [AppTheme.rgb(0.30, 0.62, 0.96).cgColor, AppTheme.rgb(0.18, 0.43, 0.81).cgColor] : [AppTheme.rgb(0.26, 0.30, 0.37).cgColor, AppTheme.rgb(0.21, 0.25, 0.31).cgColor]
+            track.colors = on ? [BrandPalette.green.cgColor, BrandPalette.green.cgColor] : [AppTheme.rgb(0.26, 0.30, 0.37).cgColor, AppTheme.rgb(0.21, 0.25, 0.31).cgColor]
             track.borderColor = NSColor.white.withAlphaComponent(0.16).cgColor
         }
         innerLight.opacity = AppTheme.dark(effectiveAppearance) ? 0.3 : 1
         knob.frame.origin.x = on ? bounds.width - knob.frame.width - 1.15 : 1.15
         CATransaction.commit()
     }
+}
+/// 保留 NSButton 的单选语义和键盘操作，只替换系统蓝色的指示器。
+final class BrandRadioButton: NSButton {
+    override var intrinsicContentSize: NSSize {
+        let textSize = (title as NSString).size(withAttributes: [.font: font ?? NSFont.systemFont(ofSize: 14)])
+        return NSSize(width: ceil(textSize.width) + 24, height: max(22, ceil(textSize.height) + 4))
+    }
+    override func draw(_ dirtyRect: NSRect) {
+        let opacity: CGFloat = isEnabled ? (isHighlighted ? 0.75 : 1) : 0.45
+        let selected = state == .on
+        let indicator = NSRect(x: 2, y: (bounds.height - 14) / 2, width: 14, height: 14)
+        let ring = NSBezierPath(ovalIn: indicator)
+        (selected ? BrandPalette.accent : Glass.secondary).withAlphaComponent(opacity).setStroke()
+        ring.lineWidth = selected ? 1.5 : 1
+        ring.stroke()
+        if selected {
+            BrandPalette.accent.withAlphaComponent(opacity).setFill()
+            NSBezierPath(ovalIn: indicator.insetBy(dx: 3.5, dy: 3.5)).fill()
+        }
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font ?? NSFont.systemFont(ofSize: 14),
+            .foregroundColor: Glass.text.withAlphaComponent(opacity)
+        ]
+        let textSize = (title as NSString).size(withAttributes: attributes)
+        (title as NSString).draw(in: NSRect(x: 24, y: (bounds.height - textSize.height) / 2,
+                                          width: max(0, bounds.width - 24), height: textSize.height), withAttributes: attributes)
+    }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
 }
 func toggle(_ on: Bool, target: AnyObject, action: Selector) -> GlassToggle {
     GlassToggle(on: on, target: target, action: action)
@@ -620,7 +655,7 @@ final class MouseGestureIcon: NSView {
         NSGraphicsContext.saveGraphicsState()
         body.addClip()
         if key != .released {
-            NSColor(srgbRed: 0.55, green: 0.78, blue: 1, alpha: 1).setFill()
+            BrandPalette.green.setFill()
             NSBezierPath(rect: NSRect(x: key == .left ? 0 : 9, y: 0, width: 9, height: 11)).fill()
         }
         NSGraphicsContext.restoreGraphicsState()
@@ -966,7 +1001,7 @@ final class DictionaryPane: NSView, NSTextFieldDelegate {
             let pill = GlassView(role: .button)
             pill.translatesAutoresizingMaskIntoConstraints = false
             pill.layer?.cornerRadius = 15
-            if highlighted.contains(item.text) { pill.layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.6).cgColor }
+            if highlighted.contains(item.text) { pill.layer?.borderColor = BrandPalette.accent.withAlphaComponent(0.6).cgColor }
             let text = label(item.text, size: 13); text.textColor = Glass.text; text.translatesAutoresizingMaskIntoConstraints = false
             var tip = ["manual": "手动添加", "hotkey": "快捷键添加", "correction": "从修改中学到"][item.source] ?? item.source
             if !item.appName.isEmpty { tip += " · 来自 \(item.appName)" }
@@ -1436,7 +1471,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
         AppTheme.apply(settings.appearance)
         let window = AlwaysActiveWindow(contentRect: NSRect(origin: .zero, size: AppWindowLayout.initialSize), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.contentMinSize = AppWindowLayout.minimum
-        window.title = "OneMore"; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
+        window.title = "NoASR"; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false; window.center()
         // 保留透出壁纸的系统毛玻璃，外观继承应用设置。
         window.isOpaque = false; window.backgroundColor = .clear; window.appearance = nil
@@ -1470,7 +1505,9 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
         let sidebar = ThemeSurface(fill: { AppTheme.sidebar })
         sidebarView = sidebar
         sidebar.translatesAutoresizingMaskIntoConstraints = false
-        let version = label("v" + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0"), size: 11)
+        let fullVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0-preview.1"
+        let version = label("v" + fullVersion.components(separatedBy: "-")[0] + " · 预览版", size: 11)
+        version.toolTip = fullVersion
         version.textColor = Glass.secondary
         version.translatesAutoresizingMaskIntoConstraints = false
         sidebar.addSubview(version)
@@ -1534,7 +1571,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
         }
         let brand = BrandHeader(compact: true)
         sidebar.addSubview(brand)
-        NSLayoutConstraint.activate([brand.centerXAnchor.constraint(equalTo: sidebar.centerXAnchor), brand.topAnchor.constraint(equalTo: sidebar.topAnchor, constant: 43)])
+        NSLayoutConstraint.activate([brand.leadingAnchor.constraint(equalTo: sidebar.leadingAnchor, constant: 20), brand.topAnchor.constraint(equalTo: sidebar.topAnchor, constant: 43)])
         sidebar.addSubview(list)
         NSLayoutConstraint.activate([
             list.leadingAnchor.constraint(equalTo: sidebar.leadingAnchor, constant: 12), list.trailingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: -12),
@@ -1641,7 +1678,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
     }
 
     private func buildService() -> NSView {
-        providerControl = segmented(Provider.order.map { Provider.titles[$0]! }, selected: 0, target: self, action: #selector(providerChanged), recommended: 0)
+        providerControl = segmented(Provider.order.map { Provider.titles[$0]! }, selected: 0, target: self, action: #selector(providerChanged))
         apiKey.placeholderString = "输入 API Key"; apiKey.target = self; apiKey.action = #selector(changed)
         apiKey.setAccessibilityLabel("API Key")
         let check = button("测试连接", target: self, action: #selector(runCheck(_:)))
@@ -1701,6 +1738,7 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
         soundSwitch = toggle(true, target: self, action: #selector(changed))
         styleControl = segmented(Cues.styles.map(\.title), selected: 0, target: self, action: #selector(styleChanged))
         volume.target = self; volume.action = #selector(volumeChanged)
+        volume.trackFillColor = BrandPalette.green
         volume.setAccessibilityLabel("提示音音量")
         volumeLabel.widthAnchor.constraint(equalToConstant: 38).isActive = true
         let preview = button("试听", target: self, action: #selector(previewSound))
@@ -1816,7 +1854,8 @@ final class SettingsWindow: NSWindowController, NSWindowDelegate, NSTextViewDele
         let auto = Microphone.preferred(microphones, defaultID: Microphone.defaultID())
         let manual = microphones.firstIndex { settings.device_uid.isEmpty ? (!settings.device.isEmpty && $0.name == settings.device) : $0.uid == settings.device_uid }
         func radio(_ title: String, _ detail: String, tag: Int, on: Bool) -> NSView {
-            let control = NSButton(radioButtonWithTitle: title, target: self, action: #selector(microphoneChosen(_:)))
+            let control = BrandRadioButton(title: title, target: self, action: #selector(microphoneChosen(_:)))
+            control.setButtonType(.radio)
             control.tag = tag; control.isEnabled = tag != -2; control.state = on ? .on : .off; control.font = NSFont(name: "PingFangSC-Regular", size: 14)
             var views: [NSView] = [control]
             if !detail.isEmpty { let text = note(detail); views.append(text) }
@@ -2150,7 +2189,7 @@ final class OnboardingWindow: NSWindowController, NSWindowDelegate {
     init(settings: Settings, previewOnly: Bool = false) {
         self.settings = settings; self.previewOnly = previewOnly
         let window = AlwaysActiveWindow(contentRect: NSRect(origin: .zero, size: AppWindowLayout.initialSize), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = "OneMore"; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
+        window.title = "NoASR"; window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false; window.center(); window.hasShadow = false
         window.isOpaque = false; window.backgroundColor = .clear; window.appearance = nil
         let glass = NSVisualEffectView(); glass.material = .underWindowBackground; glass.blendingMode = .behindWindow; glass.state = .active
@@ -2168,7 +2207,7 @@ final class OnboardingWindow: NSWindowController, NSWindowDelegate {
         headingIcon.imageScaling = .scaleProportionallyUpOrDown
         headingIcon.widthAnchor.constraint(equalToConstant: 48).isActive = true; headingIcon.heightAnchor.constraint(equalToConstant: 48).isActive = true
         let head = NSStackView(views: [headingIcon, stack([title, subtitle], spacing: 6), spring()]); head.spacing = 14; head.alignment = .centerY
-        providerControl = segmented(Provider.order.map { Provider.titles[$0]! }, selected: providerKeys.firstIndex(of: settings.provider) ?? 0, target: self, action: #selector(providerChanged), recommended: 0)
+        providerControl = segmented(Provider.order.map { Provider.titles[$0]! }, selected: providerKeys.firstIndex(of: settings.provider) ?? 0, target: self, action: #selector(providerChanged))
         apiKey.placeholderString = "输入 API Key"; apiKey.stringValue = previewOnly ? "" : settings.active.api_key
         apiKey.font = .systemFont(ofSize: 14); apiKey.isBordered = false; apiKey.drawsBackground = false; apiKey.focusRingType = .none
         tryBox.font = NSFont(name: "PingFangSC-Regular", size: 14); tryBox.isRichText = false; tryBox.drawsBackground = false; tryBox.textColor = Glass.text; tryBox.textContainerInset = NSSize(width: 12, height: 12)
@@ -2454,8 +2493,8 @@ final class Overlay: NSObject {
         } else { screen = NSScreen.screens.first { $0.frame.contains(point) } }
         placementFrame = (screen ?? NSScreen.main)?.visibleFrame
     }
-    private let accent = NSColor(srgbRed: 0.12, green: 0.43, blue: 0.84, alpha: 1)
-    private let blue = NSColor(srgbRed: 0.30, green: 0.62, blue: 1.0, alpha: 1)
+    private let accent = BrandPalette.accent
+    private let blue = BrandPalette.accent
     private let red = NSColor(srgbRed: 1.0, green: 0.353, blue: 0.373, alpha: 1)
     override init() {
         panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 160, height: 40), styleMask: [.borderless,.nonactivatingPanel], backing: .buffered, defer: false)

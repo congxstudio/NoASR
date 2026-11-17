@@ -17,12 +17,12 @@ BASE_DIR = (_LEGACY_DIR if os.path.exists(os.path.join(_LEGACY_DIR, "config.json
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 HISTORY_PATH = os.path.join(BASE_DIR, "history.json")
 LOG_PATH = os.path.join(BASE_DIR, "app.log")
-ICON_PATH = os.path.join(SOURCE_DIR, "assets", "onemore.ico")
+ICON_PATH = os.path.join(SOURCE_DIR, "assets", "noasr-windows.ico")
 RECORDINGS_DIR = os.path.join(BASE_DIR, "recordings")
 LOG_MAX_BYTES = 512 * 1024  # 日志滚动:当前文件 + 1 个备份,合计不超过 1MB
 
-APP_NAME = "OneMore"
-APP_VERSION = "1.0.0"  # 显示在设置窗口左下角;分发给别人时改这里,便于区分版本
+APP_NAME = "NoASR"
+APP_VERSION = "0.1.0-preview.1"
 
 # 识别服务商。kind: openai = OpenAI 兼容 chat/completions;gemini = Google 原生接口。
 # route: direct 只直连(国内节点,不走 VPN 代理) / proxy_first 系统代理优先、连不上改直连 / proxy 只走系统代理。
@@ -378,7 +378,7 @@ def _pythonw():
 
 
 def create_desktop_shortcut():
-    """在桌面创建 OneMore 快捷方式,返回路径。"""
+    """在桌面创建 NoASR 快捷方式,返回路径。"""
     import subprocess
 
     def ps_quote(s):
@@ -393,7 +393,7 @@ $s.TargetPath = {ps_quote(_pythonw())}
 $s.Arguments = '"' + {ps_quote(os.path.join(BASE_DIR, "main.pyw"))} + '"'
 $s.WorkingDirectory = {ps_quote(BASE_DIR)}
 $s.IconLocation = {ps_quote(ICON_PATH)}
-$s.Description = '{APP_NAME} · 全模态语音输入'
+$s.Description = '{APP_NAME} · Omni全模态语音输入法'
 $s.Save()
 Write-Output $path
 """

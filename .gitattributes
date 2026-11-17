@@ -1,3 +1,6 @@
 *.pdf binary
+# macOS shell scripts and signing plists must retain Unix line endings.
+macos/*.command text eol=lf
+macos/*.plist text eol=lf
 # Preserve the upstream license text verbatim.
 macos/ThirdParty/LAME-COPYING.txt -whitespace
