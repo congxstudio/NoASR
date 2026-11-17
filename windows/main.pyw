@@ -6,6 +6,24 @@ import os
 import sys
 from logging.handlers import RotatingFileHandler
 
+if any(mode in sys.argv for mode in ("--installer-migrate", "--uninstall-cleanup")):
+    from installer_hooks import run
+    mode = "--installer-migrate" if "--installer-migrate" in sys.argv else "--uninstall-cleanup"
+    sys.exit(run(mode))
+
+if "--packaging-check" in sys.argv:
+    import json
+    from pathlib import Path
+    report = sys.argv[sys.argv.index("--packaging-check") + 1]
+    try:
+        from package_check import run
+        run(report)
+    except Exception as error:
+        Path(report).write_text(json.dumps({"ok": False, "error": str(error),
+            "type": type(error).__name__}, ensure_ascii=False), encoding="utf-8")
+        sys.exit(1)
+    sys.exit(0)
+
 from PySide6.QtCore import QLibraryInfo, QLockFile, QObject, Qt, QTimer, QTranslator
 from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
@@ -281,7 +299,7 @@ class App(QObject):  # 继承 QObject,后台线程发来的信号会自动排队
     # ----- 引擎事件 -----
     def _on_state(self, state, text):
         if text and state in ("error", "notice"):
-            logging.info("状态 %s %s", state, text)
+            logging.info("状态 %s (提示字数:%d)", state, len(text))
         self.state = state if state in ("recording", "processing") else "idle"
         self._refresh_status()
 
@@ -351,6 +369,17 @@ class App(QObject):  # 继承 QObject,后台线程发来的信号会自动排队
 
 
 def main():
+    # 供安装器检测运行实例，升级前让用户正常退出。
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    kernel.CreateMutexW.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    ctypes.set_last_error(0)
+    mutex = kernel.CreateMutexW(None, False, "Local\\OneMore.Desktop")
+    if not mutex:
+        raise ctypes.WinError()
+    already_running = ctypes.get_last_error() == 183
     # 让任务栏/弹窗使用本程序图标,而不是 Python 图标
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Daiwen.VoiceInput")
     app = QApplication(sys.argv)
@@ -364,8 +393,9 @@ def main():
         app.installTranslator(translator)
 
     lock = QLockFile(config.BASE_DIR + "/.app.lock")
-    if not lock.tryLock(100):
+    if already_running or not lock.tryLock(100):
         QMessageBox.information(None, config.APP_NAME, "程序已在运行,请在系统托盘中查看。")
+        kernel.CloseHandle(mutex)
         return 0
 
     holder = App(app)  # noqa: F841 保持引用
@@ -373,7 +403,10 @@ def main():
         holder.open_settings()
     if "--onboarding" in sys.argv:
         holder.open_onboarding()
-    return app.exec()
+    try:
+        return app.exec()
+    finally:
+        kernel.CloseHandle(mutex)
 
 
 if __name__ == "__main__":

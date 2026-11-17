@@ -12,6 +12,7 @@ dist/
 .DS_Store
 macos/build/
 windows/.venv/
+windows/installer/node_modules/
 windows/config.json
 windows/history.json
 windows/recordings/

@@ -1,4 +1,4 @@
-"""配置与历史记录的读写。文件保存在程序目录下,已被 .gitignore 忽略。"""
+"""配置与历史读写；源码保留旧位置，安装版使用独立的本地用户数据目录。"""
 import json
 import os
 import re
@@ -12,8 +12,13 @@ _history_lock = threading.Lock()
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 兼容迁移前的本地数据,避免已有 Windows 用户重新填写 Key。
 _LEGACY_DIR = os.path.dirname(SOURCE_DIR)
-BASE_DIR = (_LEGACY_DIR if os.path.exists(os.path.join(_LEGACY_DIR, "config.json"))
-            else SOURCE_DIR)
+if getattr(sys, "frozen", False):
+    # 安装包的资源只读；用户数据独立保存，升级和卸载均保留。
+    BASE_DIR = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "OneMore")
+    os.makedirs(BASE_DIR, exist_ok=True)
+else:
+    BASE_DIR = (_LEGACY_DIR if os.path.exists(os.path.join(_LEGACY_DIR, "config.json"))
+                else SOURCE_DIR)
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 HISTORY_PATH = os.path.join(BASE_DIR, "history.json")
 LOG_PATH = os.path.join(BASE_DIR, "app.log")
@@ -372,14 +377,24 @@ _RUN_NAME = "DaiwenVoiceInput"
 
 
 def _pythonw():
+    if getattr(sys, "frozen", False):
+        return sys.executable
     exe = sys.executable
     pyw = os.path.join(os.path.dirname(exe), "pythonw.exe")
     return pyw if os.path.exists(pyw) else exe
 
 
+def launch_command():
+    """安装版直接启动 EXE，源码版保留兼容入口。"""
+    if getattr(sys, "frozen", False):
+        return sys.executable, "", os.path.dirname(sys.executable)
+    return _pythonw(), '"' + os.path.join(BASE_DIR, "main.pyw") + '"', BASE_DIR
+
+
 def create_desktop_shortcut():
     """在桌面创建 NoASR 快捷方式,返回路径。"""
     import subprocess
+    exe, arguments, cwd = launch_command()
 
     def ps_quote(s):
         return "'" + s.replace("'", "''") + "'"
@@ -389,9 +404,9 @@ def create_desktop_shortcut():
 $desktop = [Environment]::GetFolderPath('Desktop')
 $path = Join-Path $desktop '{APP_NAME}.lnk'
 $s = (New-Object -ComObject WScript.Shell).CreateShortcut($path)
-$s.TargetPath = {ps_quote(_pythonw())}
-$s.Arguments = '"' + {ps_quote(os.path.join(BASE_DIR, "main.pyw"))} + '"'
-$s.WorkingDirectory = {ps_quote(BASE_DIR)}
+$s.TargetPath = {ps_quote(exe)}
+$s.Arguments = {ps_quote(arguments)}
+$s.WorkingDirectory = {ps_quote(cwd)}
 $s.IconLocation = {ps_quote(ICON_PATH)}
 $s.Description = '{APP_NAME} · Omni全模态语音输入法'
 $s.Save()
@@ -407,7 +422,7 @@ Write-Output $path
 _TASK_NAME = "DaiwenVoiceInput"
 _TASK_XML = """<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
-  <RegistrationInfo><Description>OneMore 语音输入:登录后以管理员权限启动</Description></RegistrationInfo>
+  <RegistrationInfo><Description>NoASR 语音输入法:登录后以管理员权限启动</Description></RegistrationInfo>
   <Triggers>
     <LogonTrigger><Enabled>true</Enabled><UserId>{user}</UserId><Delay>PT10S</Delay></LogonTrigger>
   </Triggers>
@@ -426,7 +441,7 @@ _TASK_XML = """<?xml version="1.0" encoding="UTF-16"?>
     <Enabled>true</Enabled>
   </Settings>
   <Actions Context="Author">
-    <Exec><Command>{exe}</Command><Arguments>"{script}"</Arguments><WorkingDirectory>{cwd}</WorkingDirectory></Exec>
+    <Exec><Command>{exe}</Command><Arguments>{arguments}</Arguments><WorkingDirectory>{cwd}</WorkingDirectory></Exec>
   </Actions>
 </Task>
 """
@@ -458,8 +473,9 @@ def set_autostart(enabled):
         _schtasks("/Delete", "/TN", _TASK_NAME, "/F")  # 不存在时报错,忽略
         return
     user = f"{os.environ.get('USERDOMAIN', '')}\\{os.environ.get('USERNAME', '')}"
-    xml = _TASK_XML.format(user=escape(user), exe=escape(_pythonw()),
-                           script=escape(os.path.join(BASE_DIR, "main.pyw")), cwd=escape(BASE_DIR))
+    exe, arguments, cwd = launch_command()
+    xml = _TASK_XML.format(user=escape(user), exe=escape(exe),
+                           arguments=escape(arguments), cwd=escape(cwd))
     path = os.path.join(BASE_DIR, ".autostart_task.xml")
     with open(path, "w", encoding="utf-16") as f:
         f.write(xml)

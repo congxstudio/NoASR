@@ -1,0 +1,43 @@
+{
+  "name": "noasr-installer",
+  "version": "0.1.0-preview.1",
+  "private": true,
+  "description": "NoASR Windows installer tooling",
+  "author": "congxstudio",
+  "license": "MIT",
+  "devDependencies": {
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.daiwen.voice-input",
+    "productName": "NoASR",
+    "copyright": "Copyright (c) 2026 congxstudio",
+    "electronVersion": "45.2.3",
+    "directories": {
+      "output": "../../dist/release",
+      "buildResources": "."
+    },
+    "win": {
+      "target": [{"target": "nsis", "arch": ["x64"]}],
+      "icon": "../assets/noasr-windows.ico",
+      "artifactName": "NoASR-${version}-windows-x64-setup.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "guid": "B9866D08-10BD-4B43-A98D-F0EE5021C620",
+      "packElevateHelper": false,
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NoASR",
+      "installerIcon": "../assets/noasr-windows.ico",
+      "uninstallerIcon": "../assets/noasr-windows.ico",
+      "installerHeaderIcon": "../assets/noasr-windows.ico",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "include": "installer.nsh"
+    }
+  }
+}
