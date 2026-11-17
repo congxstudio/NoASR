@@ -34,7 +34,7 @@ Mac 空闲时释放麦克风；Windows 当前维持录音通道以缩短启动�
 
 - Mac 正式版：`~/Library/Application Support/DaiwenVoiceInput/`。
 - Mac 开发构建：`~/Library/Application Support/OneMoreDevelopment/`，独立于正式版。
-- Windows：通常在 `windows/` 下；从旧根目录迁移的安装可能继续使用根目录中的配置、历史及 `recordings/`，以实际运行目录为准。
+- Windows 源码版：通常在 `windows/` 下；从旧根目录迁移的安装可能继续使用根目录中的配置、历史及 `recordings/`。Windows 安装预览版：使用独立的 `%LOCALAPPDATA%\OneMore\` 兼容目录，升级与卸载保留此目录；不自动复制源码版数据。
 
 只删除语音历史：使用应用内“清空历史”或“关闭并清空”。词典和配置独立保留；旧版 Windows 训练副本随历史一并清理。
 

@@ -79,7 +79,7 @@
 | 功能 | Mac 规则(要点) | Windows 做法 | 状态 |
 | --- | --- | --- | --- |
 | 回填后读回校验 | Electron 应用(看 Frameworks 目录)回填后读回输入框对末尾,最多 0.6 秒;缺 ≤40 字补打并复查;校验期间回车照样攒着 | 同;按窗口类名 `Chrome_WidgetWin_1` 认 Chromium 内核;读回用 UIA | ✅ |
-| 打可分发安装包(dmg、签名、公证) | `release.command` | ➖ Windows 个人自用,不做安装包 | ➖ |
+| 安装包 | Mac 的签名、公证由 `release.command` 管理 | Windows 使用 PyInstaller GUI 构建和对齐 JellyGoGo 的 NSIS 普通向导，默认创建桌面/开始菜单快捷方式、完成后启动，无协议确认页但附带 MIT 文本；独立用户数据目录与临时目录自检。用户已确认安装流程和观感，本机当前用户卸载完成、配置/历史及源码自启保留；跨版本升级、所有用户安装、安装版自启与真实识别仍待专项验收，未发布 Release | 🟡 |
 
 ## 反向:Windows 有、Mac 待评估
 
