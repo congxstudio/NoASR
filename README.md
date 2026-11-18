@@ -82,7 +82,7 @@ NoASR 就是这样做出来的。它走 Omni 全模态路线，把原始音频�
 
 [全部版本与 SHA256 校验文件](https://github.com/congxstudio/NoASR/releases)
 
-安装后，在模型配置里选择服务商，填入自己的 API Key，测试连接。
+升级前先从菜单栏退出旧版本，新旧版本共用运行标识。安装后，在模型配置里选择服务商，填入自己的 API Key，测试连接。
 
 <details>
 <summary>从源码构建</summary>

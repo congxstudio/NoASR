@@ -33,6 +33,40 @@ if /usr/bin/grep -rqE 'sk-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{30,}' "$APP"; the
   exit 1
 fi
 
+notarize() {
+  echo "正在上传 Apple 公证：$1"
+  # 网络连接超时时最多重试 3 次；Apple 可能仍在处理此前的提交。
+  SUBMIT=""
+  for attempt in 1 2 3; do
+    SUBMIT=$(xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1) || true
+    echo "$SUBMIT"
+    echo "$SUBMIT" | /usr/bin/grep -q 'status: Accepted' && break
+    if echo "$SUBMIT" | /usr/bin/grep -qiE 'timeout|connection'; then echo "第 $attempt 次上传超时,重试…"; continue; fi
+    break
+  done
+  if ! echo "$SUBMIT" | /usr/bin/grep -q 'status: Accepted'; then
+    ID=$(echo "$SUBMIT" | /usr/bin/grep -m1 '  id:' | awk '{print $2}')
+    [[ -n "$ID" ]] && xcrun notarytool log "$ID" --keychain-profile "$NOTARY_PROFILE" || true
+    echo '公证未通过,上面是 Apple 返回的原因。'
+    exit 1
+  fi
+}
+
+# App 自身也需要票据，拖出安装盘后仍能离线通过分发验证。
+if [[ "$SKIP_NOTARIZE" != "1" ]]; then
+  mkdir -p "$PWD/dist"
+  APP_ARCHIVE="$PWD/dist/NoASR-notarization.zip"
+  ditto -c -k --keepParent "$APP" "$APP_ARCHIVE"
+  notarize "$APP_ARCHIVE"
+  rm -f "$APP_ARCHIVE"
+  xcrun stapler staple -q "$APP"
+  xcrun stapler validate "$APP"
+  codesign --verify --deep --strict "$APP"
+  if command -v syspolicy_check >/dev/null 2>&1; then
+    syspolicy_check distribution "$APP"
+  fi
+fi
+
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")
 DIST="$PWD/dist"
 STAGING="$DIST/staging"
@@ -74,22 +108,8 @@ if [[ "$SKIP_NOTARIZE" == "1" ]]; then
   exit 0
 fi
 
-echo '正在上传 Apple 公证,通常 1～5 分钟…'
-# 国内网络上传偶尔连接超时,自动重试 3 次;每次都是新的提交,超时的那次 Apple 那边会自己作废。
-SUBMIT=""
-for attempt in 1 2 3; do
-  SUBMIT=$(xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1) || true
-  echo "$SUBMIT"
-  echo "$SUBMIT" | /usr/bin/grep -q 'status: Accepted' && break
-  if echo "$SUBMIT" | /usr/bin/grep -qiE 'timeout|connection'; then echo "第 $attempt 次上传超时,重试…"; continue; fi
-  break
-done
-if ! echo "$SUBMIT" | /usr/bin/grep -q 'status: Accepted'; then
-  ID=$(echo "$SUBMIT" | /usr/bin/grep -m1 '  id:' | awk '{print $2}')
-  [[ -n "$ID" ]] && xcrun notarytool log "$ID" --keychain-profile "$NOTARY_PROFILE" || true
-  echo '公证未通过,上面是 Apple 返回的原因。'
-  exit 1
-fi
+notarize "$DMG"
 xcrun stapler staple -q "$DMG"
+xcrun stapler validate "$DMG"
 spctl -a -t open --context context:primary-signature -v "$DMG"
 printf '\n安装包已生成并通过公证,可以直接发给别人:\n%s\n' "$DMG"

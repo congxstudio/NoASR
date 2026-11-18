@@ -2,7 +2,7 @@
 
 Swift + 系统原生界面，菜单栏常驻。空闲时不占用麦克风。录音由配置的云端服务识别，数据流向、保存和删除方式见 [数据与隐私说明](../PRIVACY.md)。
 
-当前为采用 [MIT 协议](../LICENSE) 的早期预览版。[下载 macOS 安装盘](https://github.com/congxstudio/NoASR/releases/download/v0.1.0-preview.1/NoASR-0.1.0-preview.1.dmg)（macOS 13+、Apple 芯片，已签名并通过 Apple 公证）。打开 DMG 后，将 NoASR 拖入 Applications 即可安装；也可以从下方开发构建开始。已知限制见 [预览版指南](../docs/PREVIEW_GUIDE.md)。
+当前为采用 [MIT 协议](../LICENSE) 的早期预览版。[下载 macOS 安装盘](https://github.com/congxstudio/NoASR/releases/download/v0.1.0-preview.1/NoASR-0.1.0-preview.1.dmg)（macOS 13+、Apple 芯片，已签名并通过 Apple 公证）。升级前先从菜单栏退出旧版本，避免新进程被单实例保护退出。打开 DMG 后，将 NoASR 拖入 Applications 即可安装；也可以从下方开发构建开始。已知限制见 [预览版指南](../docs/PREVIEW_GUIDE.md)。
 
 左下角显示 `v0.1.0 · 预览版`，完整内部版本号为 `0.1.0-preview.1`。
 
@@ -74,7 +74,7 @@ VOICE_INPUT_LAME_LIBRARY=/你的路径/libmp3lame.0.dylib ./macos/build-dev.comm
 ./macos/release.command
 ```
 
-产物是 `macos/dist/NoASR-<版本>.dmg`,已签名并通过 Apple 公证,别人下载后直接双击就能装。dmg 包含 App、Applications 快捷方式、安装说明和数据与隐私说明;API Key、词典、历史都存在 `~/Library/Application Support/DaiwenVoiceInput/`,脚本会检查 App 包里没有任何 json、日志、录音或疑似密钥,有就停止。版本号改 `Info.plist` 里的 `CFBundleShortVersionString`。
+产物是 `macos/dist/NoASR-<版本>.dmg`,App 与 DMG 均已签名、公证并附票据，App 另通过可用的 `syspolicy_check distribution` 分发自检。dmg 包含 App、Applications 快捷方式、安装说明和数据与隐私说明;API Key、词典、历史都存在 `~/Library/Application Support/DaiwenVoiceInput/`,脚本会检查 App 包里没有任何 json、日志、录音或疑似密钥,有就停止。版本号改 `Info.plist` 里的 `CFBundleShortVersionString`。
 
 第一次用之前要把公证凭证存进钥匙串(只做一次):在 https://account.apple.com 生成一个 App 专用密码,然后执行 `xcrun notarytool store-credentials voice-input --apple-id <Apple ID 邮箱> --team-id <你的 Apple Team ID>`,按提示粘贴密码。没有凭证脚本会停下并打印这段说明。
 

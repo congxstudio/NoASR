@@ -110,3 +110,5 @@ Windows 上新增、Mac 也可能需要的功能。用户在 Mac 上开发时看
 ## 2026-11-18 打包记录
 
 macOS Apple 芯片 DMG 已签名、公证；Windows x64 使用 NSIS 安装向导，未签名。Windows 构建脚本补充 UTF-8 BOM，兼容 Windows PowerShell 5.1 中文解析；两端数据目录及迁移标识保持兼容。
+
+macOS 分发修正：App 先公证并附票据，再封装并公证 DMG，避免安装盘有票据而拖出的 App 缺票据；构建时执行可用的 `syspolicy_check distribution`。Windows 分发流程不变。
