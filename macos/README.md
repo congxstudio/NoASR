@@ -2,7 +2,7 @@
 
 Swift + 系统原生界面，菜单栏常驻。空闲时不占用麦克风。录音由配置的云端服务识别，数据流向、保存和删除方式见 [数据与隐私说明](../PRIVACY.md)。
 
-当前为采用 [MIT 协议](../LICENSE) 的早期源码预览版，尚未提供正式 Release 安装包。本地体验可从下方开发构建开始；已知限制见 [预览版指南](../docs/PREVIEW_GUIDE.md)。
+当前为采用 [MIT 协议](../LICENSE) 的早期预览版。[下载 macOS 安装盘](https://github.com/congxstudio/NoASR/releases/download/v0.1.0-preview.1/NoASR-0.1.0-preview.1.dmg)（macOS 13+、Apple 芯片，已签名并通过 Apple 公证）。打开 DMG 后，将 NoASR 拖入 Applications 即可安装；也可以从下方开发构建开始。已知限制见 [预览版指南](../docs/PREVIEW_GUIDE.md)。
 
 左下角显示 `v0.1.0 · 预览版`，完整内部版本号为 `0.1.0-preview.1`。
 

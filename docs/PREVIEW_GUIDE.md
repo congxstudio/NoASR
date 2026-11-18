@@ -1,6 +1,6 @@
 # 预览版指南与已知限制
 
-NoASR 当前为采用 [MIT 协议](../LICENSE) 的早期源码预览版，主要提供源码与本地构建方式，尚未提供正式 Release 安装包。欢迎体验、反馈问题和参与改进。
+NoASR 当前为采用 [MIT 协议](../LICENSE) 的早期预览版，提供 [macOS Apple 芯片与 Windows x64 安装包](https://github.com/congxstudio/NoASR/releases/tag/v0.1.0-preview.1)，也支持从源码构建。欢迎体验、反馈问题和参与改进。
 
 仓库从可用源码整理而来，不包含旧项目的 Git 历史、用户数据、设计原型、研究草稿或“发送抓取”功能。请使用自己的 API Key，先在无敏感内容的测试输入框中体验。
 
@@ -13,6 +13,12 @@ NoASR 当前为采用 [MIT 协议](../LICENSE) 的早期源码预览版，主要
 - Windows 配置迁移、存储与密码框保护已提供逻辑回归，源码检查和自动测试见仓库的 GitHub Actions。测试不打开设备、不执行实际按键、不调用云端服务。
 - Mac开发构建及核心自检通过；正式签名构建在维护者本机验证。它们不是全平台端到端测试。
 
+## 安装包
+
+- [macOS DMG 安装盘](https://github.com/congxstudio/NoASR/releases/download/v0.1.0-preview.1/NoASR-0.1.0-preview.1.dmg)：macOS 13+、Apple 芯片，已签名并通过 Apple 公证。挂载后拖入 Applications。
+- [Windows x64 安装程序](https://github.com/congxstudio/NoASR/releases/download/v0.1.0-preview.1/NoASR-0.1.0-preview.1-windows-x64-setup.exe)：未签名的 NSIS 安装向导。
+- 两端通过核心／逻辑自检；本次 Windows 包另通过临时数据目录中的依赖、图标、Qt 插件与 MP3 编码检查。以上不代替真实桌面、录音、热键和自动输入验收。
+
 ## 从源码开始
 
 ### macOS
@@ -23,7 +29,7 @@ NoASR 当前为采用 [MIT 协议](../LICENSE) 的早期源码预览版，主要
 4. 按系统引导完成所需权限，填写自己的Key并测试连接。开发版数据在OneMoreDevelopment目录，第一次不会读正式版Key。
 5. 先测试短按/长按、取消、回填中切换应用、清空临时历史，再试日常使用。录屏权限只在使用截图时需要。
 
-本地体验使用开发构建即可，无需维护者的证书或私钥。需要制作签名、公证的 dmg 时，按 [Mac 分发说明](../macos/README.md#分发给别人) 准备自己的证书和公证凭证；当前仓库暂不附带安装包。
+本地体验使用开发构建即可，无需维护者的证书或私钥。需要制作签名、公证的 dmg 时，按 [Mac 分发说明](../macos/README.md#分发给别人) 准备自己的证书和公证凭证；安装包通过 GitHub Releases 分发。
 
 ### Windows
 
@@ -36,7 +42,7 @@ Windows依赖尚未形成经干净安装验证的锁定文件；首次安装有�
 
 ## 反馈与后续事项
 
-一般问题可通过 [GitHub Issues](https://github.com/congxstudio/OneMore/issues) 反馈，记录操作步骤、系统/应用版本、预期与实际结果；如需截图或日志，先删除私人内容，不上传 Key、录音、词典或完整用户历史。涉及敏感信息的安全问题见 [安全反馈](../SECURITY.md)。
+一般问题可通过 [GitHub Issues](https://github.com/congxstudio/NoASR/issues) 反馈，记录操作步骤、系统/应用版本、预期与实际结果；如需截图或日志，先删除私人内容，不上传 Key、录音、词典或完整用户历史。涉及敏感信息的安全问题见 [安全反馈](../SECURITY.md)。
 
 后续重点是 Windows 完整桌面验证、Mac 另一台干净机器及 Intel 构建验证、Windows 依赖版本锁定、第三方组件声明，以及版本与安装包发布流程。上述限制不代表所有使用场景都不可用，也不将日常使用或逻辑测试等同于完整端到端验证。
 

@@ -2,7 +2,7 @@
 
 涉及 API Key 泄露、私人录音或截图、越权输入等安全问题，请勿在公开 Issue、PR 或讨论中贴出敏感样本。
 
-如果仓库的 Security 页面提供私密漏洞报告入口，请优先使用。没有该入口时，可先在 [Issues](https://github.com/congxstudio/OneMore/issues) 中仅请求与维护者建立私下联系，不附漏洞细节或私人数据；待确认私密渠道后再提供复现信息。
+如果仓库的 Security 页面提供私密漏洞报告入口，请优先使用。没有该入口时，可先在 [Issues](https://github.com/congxstudio/NoASR/issues) 中仅请求与维护者建立私下联系，不附漏洞细节或私人数据；待确认私密渠道后再提供复现信息。
 
 一般功能问题可直接提交 Issue，说明系统与应用版本、操作步骤和预期结果，并去除密钥及个人信息。
 
